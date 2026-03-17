@@ -9,28 +9,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 
-export const createTable = pgTableCreator((name) => `pg-drizzle_${name}`);
-
-export const posts = createTable(
-  "post",
-  (d) => ({
-    id: d.uuid().primaryKey().defaultRandom(),
-    name: d.varchar({ length: 256 }),
-    createdById: d
-      .uuid()
-      .notNull()
-      .references(() => user.id),
-    createdAt: d
-      .timestamp({ withTimezone: true })
-      .$defaultFn(() => new Date())
-      .notNull(),
-    updatedAt: d.timestamp({ withTimezone: true }).$onUpdate(() => new Date()),
-  }),
-  (t) => [
-    index("created_by_idx").on(t.createdById),
-    index("name_idx").on(t.name),
-  ],
-);
+export const createTable = pgTableCreator((name) => `${name}`);
 
 export const user = pgTable("user", {
   id: uuid("id").primaryKey().defaultRandom(),
