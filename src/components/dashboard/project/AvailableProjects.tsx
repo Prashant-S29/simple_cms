@@ -1,27 +1,30 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-
 import { api } from "~/trpc/react";
 import { useDebounce } from "~/hooks/useDebounce";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Skeleton } from "~/components/ui/skeleton";
 import { FormDialog } from "../../common";
-import { CreateNewOrgForm } from "../forms";
+import { CreateNewProjectForm } from "../forms";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   ArrowLeft01Icon,
   ArrowRight01Icon,
-  Folder03Icon,
+  FolderLibraryIcon,
   PlusSignIcon,
   Search01Icon,
 } from "@hugeicons/core-free-icons";
-import { OrgCard } from "./OrgCard";
+import { ProjectCard } from "./ProjectCard";
 import { PAGINATION_LIMIT } from "~/lib/constants";
 
+interface Props {
+  orgId: string;
+  orgSlug: string;
+}
 
-export const AvailableOrgs: React.FC = () => {
+export const AvailableProjects: React.FC<Props> = ({ orgId, orgSlug }) => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -36,14 +39,15 @@ export const AvailableOrgs: React.FC = () => {
     data: response,
     isLoading,
     isFetching,
-  } = api.org.getAll.useQuery({
+  } = api.project.getAll.useQuery({
     page,
     limit: PAGINATION_LIMIT,
     search: debouncedSearch || undefined,
+    orgId,
   });
 
   const listData = response?.data;
-  const orgs = listData?.items ?? [];
+  const projects = listData?.items ?? [];
   const total = listData?.total ?? 0;
   const hasNext = listData?.hasNext ?? false;
   const hasPrev = page > 1;
@@ -56,9 +60,9 @@ export const AvailableOrgs: React.FC = () => {
       <div data-fetching={isFetching ? "true" : undefined}>
         <div className="bg-sidebar flex items-center justify-between rounded-t-2xl border p-5">
           <section>
-            <h3>Your Organizations</h3>
+            <h3>Projects</h3>
             <p className="text-muted-foreground">
-              All your organizations are listed below.
+              All projects in this organization are listed below.
             </p>
           </section>
 
@@ -82,12 +86,17 @@ export const AvailableOrgs: React.FC = () => {
               trigger={
                 <Button>
                   <HugeiconsIcon icon={PlusSignIcon} />
-                  New Organization
+                  New Project
                 </Button>
               }
-              title="Create New Organization"
-              desc="Create a new organization to manage all your projects."
-              form={<CreateNewOrgForm onSuccess={() => setDialogOpen(false)} />}
+              title="Create New Project"
+              desc="Create a new project inside this organization."
+              form={
+                <CreateNewProjectForm
+                  orgId={orgId}
+                  onSuccess={() => setDialogOpen(false)}
+                />
+              }
             />
           </section>
         </div>
@@ -105,7 +114,7 @@ export const AvailableOrgs: React.FC = () => {
               </>
             ) : (
               <>
-                {orgs.length === 0 ? (
+                {projects.length === 0 ? (
                   <div className="col-span-4">
                     <EmptyState
                       isFiltered={!!debouncedSearch}
@@ -114,8 +123,12 @@ export const AvailableOrgs: React.FC = () => {
                   </div>
                 ) : (
                   <>
-                    {orgs.map((org) => (
-                      <OrgCard key={org.id} org={org} />
+                    {projects.map((proj) => (
+                      <ProjectCard
+                        key={proj.id}
+                        project={proj}
+                        orgSlug={orgSlug}
+                      />
                     ))}
                   </>
                 )}
@@ -162,25 +175,23 @@ export const AvailableOrgs: React.FC = () => {
   );
 };
 
-const EmptyState: React.FC<{
-  isFiltered: boolean;
-  query: string;
-}> = ({ isFiltered, query }) => (
+const EmptyState: React.FC<{ isFiltered: boolean; query: string }> = ({
+  isFiltered,
+  query,
+}) => (
   <div className="bg-muted flex w-full flex-col items-center gap-4 rounded-2xl px-5 py-14 text-center">
     <div className="bg-muted-foreground/10 flex size-12 items-center justify-center rounded-xl">
-      <HugeiconsIcon icon={Folder03Icon} />
+      <HugeiconsIcon icon={FolderLibraryIcon} />
     </div>
 
     <div>
       <h3 className="font-medium">
-        {isFiltered
-          ? `No organizations found by "${query}"`
-          : "No organizations yet"}
+        {isFiltered ? `No projects found by "${query}"` : "No projects yet"}
       </h3>
       <p className="text-muted-foreground mt-1 text-sm">
         {isFiltered
           ? "Try a different search term."
-          : "Create your first organization to get started."}
+          : "Create your first project to get started."}
       </p>
     </div>
   </div>
