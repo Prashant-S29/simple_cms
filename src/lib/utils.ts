@@ -14,18 +14,13 @@ export const slugify = (value: string): string => {
     .replace(/^-+|-+$/g, "");
 };
 
-/**
- * Generates a deterministic invite code from an org slug.
- * Format: "CMS-XXXXXX" where X is an uppercase alphanumeric character.
- * Because org slugs are globally unique, the derived code is also unique.
- *
- * @example
- * generateOrgInviteCode("acme-corp")  // "CMS-ACMECO"
- * generateOrgInviteCode("my-org")     // "CMS-MYORG0"
- */
 export const generateOrgInviteCode = (slug: string): string => {
-  const sanitized = slug.replace(/-/g, "").toUpperCase();
-  const code = sanitized.slice(0, 6).padEnd(6, "0");
+  let hash = 5381;
+  for (let i = 0; i < slug.length; i++) {
+    hash = (hash * 33) ^ slug.charCodeAt(i);
+    hash = hash >>> 0; // keep it 32-bit unsigned
+  }
+  const code = hash.toString(36).toUpperCase().padStart(6, "0").slice(-6);
   return `CMS-${code}`;
 };
 

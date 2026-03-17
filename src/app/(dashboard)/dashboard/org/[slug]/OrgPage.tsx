@@ -38,11 +38,11 @@ export const OrgPage: React.FC<Props> = ({ slug }) => {
   return (
     <div className="flex h-screen w-full flex-col pt-25">
       <div className="container mx-auto flex w-full flex-col gap-5">
-        <h1 className="text-2xl">
+        <h1 className="text-2xl capitalize">
           {org.name}
           <span className="text-muted-foreground">&apos;s Dashboard</span>
         </h1>
-        <AvailableProjects orgId={org.id} orgSlug={slug} />
+        <AvailableProjects orgId={org.id} orgSlug={slug} myRole={org.myRole} />
       </div>
     </div>
   );

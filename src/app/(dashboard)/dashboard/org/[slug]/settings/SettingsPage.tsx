@@ -72,7 +72,7 @@ export const SettingsPage: React.FC<Props> = ({ slug, userId }) => {
   return (
     <div className="flex w-full flex-col py-25">
       <div className="container mx-auto flex w-full flex-col gap-5">
-        <h1 className="text-2xl">
+        <h1 className="text-2xl capitalize">
           {org.name}
           <span className="text-muted-foreground">&apos;s Settings</span>
         </h1>

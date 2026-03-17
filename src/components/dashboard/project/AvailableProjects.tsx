@@ -20,16 +20,24 @@ import {
 import { ProjectCard } from "./ProjectCard";
 import { PAGINATION_LIMIT } from "~/lib/constants";
 import Link from "next/link";
+import type { OrgRole } from "~/lib/permissions";
 
 interface Props {
   orgId: string;
   orgSlug: string;
+  myRole: OrgRole;
 }
 
-export const AvailableProjects: React.FC<Props> = ({ orgId, orgSlug }) => {
+export const AvailableProjects: React.FC<Props> = ({
+  orgId,
+  orgSlug,
+  myRole,
+}) => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
+
+  const canCreateProject = myRole === "owner" || myRole === "admin";
 
   const debouncedSearch = useDebounce(search, 400);
 
@@ -82,24 +90,27 @@ export const AvailableProjects: React.FC<Props> = ({ orgId, orgSlug }) => {
                 onChange={(e) => setSearch(e.target.value)}
               />
             </div>
-            <FormDialog
-              open={dialogOpen}
-              onOpenChange={setDialogOpen}
-              trigger={
-                <Button>
-                  <HugeiconsIcon icon={PlusSignIcon} />
-                  New Project
-                </Button>
-              }
-              title="Create New Project"
-              desc="Create a new project inside this organization."
-              form={
-                <CreateNewProjectForm
-                  orgId={orgId}
-                  onSuccess={() => setDialogOpen(false)}
-                />
-              }
-            />
+
+            {canCreateProject && (
+              <FormDialog
+                open={dialogOpen}
+                onOpenChange={setDialogOpen}
+                trigger={
+                  <Button>
+                    <HugeiconsIcon icon={PlusSignIcon} />
+                    New Project
+                  </Button>
+                }
+                title="Create New Project"
+                desc="Create a new project inside this organization."
+                form={
+                  <CreateNewProjectForm
+                    orgId={orgId}
+                    onSuccess={() => setDialogOpen(false)}
+                  />
+                }
+              />
+            )}
 
             <Button
               variant="secondary"
@@ -111,7 +122,7 @@ export const AvailableProjects: React.FC<Props> = ({ orgId, orgSlug }) => {
                 </Link>
               }
               nativeButton={false}
-            ></Button>
+            />
           </section>
         </div>
 
@@ -133,6 +144,7 @@ export const AvailableProjects: React.FC<Props> = ({ orgId, orgSlug }) => {
                     <EmptyState
                       isFiltered={!!debouncedSearch}
                       query={debouncedSearch}
+                      canCreate={canCreateProject}
                     />
                   </div>
                 ) : (
@@ -189,10 +201,11 @@ export const AvailableProjects: React.FC<Props> = ({ orgId, orgSlug }) => {
   );
 };
 
-const EmptyState: React.FC<{ isFiltered: boolean; query: string }> = ({
-  isFiltered,
-  query,
-}) => (
+const EmptyState: React.FC<{
+  isFiltered: boolean;
+  query: string;
+  canCreate: boolean;
+}> = ({ isFiltered, query, canCreate }) => (
   <div className="bg-muted flex w-full flex-col items-center gap-4 rounded-2xl px-5 py-14 text-center">
     <div className="bg-muted-foreground/10 flex size-12 items-center justify-center rounded-xl">
       <HugeiconsIcon icon={FolderLibraryIcon} />
@@ -205,7 +218,9 @@ const EmptyState: React.FC<{ isFiltered: boolean; query: string }> = ({
       <p className="text-muted-foreground mt-1 text-sm">
         {isFiltered
           ? "Try a different search term."
-          : "Create your first project to get started."}
+          : canCreate
+            ? "Create your first project to get started."
+            : "No projects have been assigned to you yet."}
       </p>
     </div>
   </div>
