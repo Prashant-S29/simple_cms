@@ -15,9 +15,11 @@ import {
   FolderLibraryIcon,
   PlusSignIcon,
   Search01Icon,
+  Settings01Icon,
 } from "@hugeicons/core-free-icons";
 import { ProjectCard } from "./ProjectCard";
 import { PAGINATION_LIMIT } from "~/lib/constants";
+import Link from "next/link";
 
 interface Props {
   orgId: string;
@@ -58,7 +60,7 @@ export const AvailableProjects: React.FC<Props> = ({ orgId, orgSlug }) => {
   return (
     <div className="flex w-full flex-col gap-5">
       <div data-fetching={isFetching ? "true" : undefined}>
-        <div className="bg-sidebar flex items-center justify-between rounded-t-2xl border p-5">
+        <div className="bg-card flex items-center justify-between rounded-t-2xl border p-5">
           <section>
             <h3>Projects</h3>
             <p className="text-muted-foreground">
@@ -98,10 +100,22 @@ export const AvailableProjects: React.FC<Props> = ({ orgId, orgSlug }) => {
                 />
               }
             />
+
+            <Button
+              variant="secondary"
+              size="lg"
+              render={
+                <Link href={`/dashboard/org/${orgSlug}/settings`}>
+                  <HugeiconsIcon icon={Settings01Icon} />
+                  Settings
+                </Link>
+              }
+              nativeButton={false}
+            ></Button>
           </section>
         </div>
 
-        <div className="bg-sidebar overflow-hidden rounded-b-2xl border border-t-0">
+        <div className="bg-card overflow-hidden rounded-b-2xl border border-t-0">
           <div className="grid grid-cols-4 gap-3 p-3">
             {isLoading ? (
               <>

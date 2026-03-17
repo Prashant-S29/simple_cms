@@ -61,7 +61,7 @@ function Button({
       {...props}
     >
       <div
-        className={`flex flex-col items-center ${isLoading ? "-translate-y-4.5" : "translate-y-4"} duration-200 gap-4`}
+        className={`flex flex-col items-center ${isLoading ? "-translate-y-4.5" : "translate-y-4"} gap-4 duration-200`}
       >
         <div className="flex items-center gap-2">{children}</div>
         <Spinner />

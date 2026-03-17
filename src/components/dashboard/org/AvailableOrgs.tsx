@@ -13,13 +13,13 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import {
   ArrowLeft01Icon,
   ArrowRight01Icon,
-  Folder03Icon,
+  FolderLibraryIcon,
   PlusSignIcon,
   Search01Icon,
 } from "@hugeicons/core-free-icons";
 import { OrgCard } from "./OrgCard";
 import { PAGINATION_LIMIT } from "~/lib/constants";
-
+import Link from "next/link";
 
 export const AvailableOrgs: React.FC = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -54,7 +54,7 @@ export const AvailableOrgs: React.FC = () => {
   return (
     <div className="flex w-full flex-col gap-5">
       <div data-fetching={isFetching ? "true" : undefined}>
-        <div className="bg-sidebar flex items-center justify-between rounded-t-2xl border p-5">
+        <div className="bg-card flex items-center justify-between rounded-t-2xl border p-5">
           <section>
             <h3>Your Organizations</h3>
             <p className="text-muted-foreground">
@@ -89,10 +89,15 @@ export const AvailableOrgs: React.FC = () => {
               desc="Create a new organization to manage all your projects."
               form={<CreateNewOrgForm onSuccess={() => setDialogOpen(false)} />}
             />
+            <Button
+              variant="outline"
+              render={<Link href="/dashboard/org/join">Join Organization</Link>}
+              nativeButton={false}
+            ></Button>
           </section>
         </div>
 
-        <div className="bg-sidebar overflow-hidden rounded-b-2xl border border-t-0">
+        <div className="bg-card overflow-hidden rounded-b-2xl border border-t-0">
           <div className="grid grid-cols-4 gap-3 p-3">
             {isLoading ? (
               <>
@@ -168,7 +173,7 @@ const EmptyState: React.FC<{
 }> = ({ isFiltered, query }) => (
   <div className="bg-muted flex w-full flex-col items-center gap-4 rounded-2xl px-5 py-14 text-center">
     <div className="bg-muted-foreground/10 flex size-12 items-center justify-center rounded-xl">
-      <HugeiconsIcon icon={Folder03Icon} />
+      <HugeiconsIcon icon={FolderLibraryIcon} />
     </div>
 
     <div>

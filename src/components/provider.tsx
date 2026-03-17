@@ -4,6 +4,7 @@ import { ThemeProvider } from "next-themes";
 import { useMount, useIsMobile } from "~/hooks";
 import { Toaster } from "sonner";
 import { TRPCReactProvider } from "~/trpc/react";
+import { TooltipProvider } from "./ui/tooltip";
 
 export const Provider: React.FC<{ children: React.ReactNode }> = ({
   children,
@@ -37,8 +38,10 @@ export const Provider: React.FC<{ children: React.ReactNode }> = ({
         defaultTheme="dark"
         disableTransitionOnChange
       >
-        <Toaster richColors/>
-        {children}
+        <TooltipProvider>
+          <Toaster richColors />
+          {children}
+        </TooltipProvider>
       </ThemeProvider>
     </TRPCReactProvider>
   );

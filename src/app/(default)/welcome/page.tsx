@@ -29,7 +29,7 @@ const Welcome: React.FC = async () => {
           <div className="bg-muted h-80 w-full rounded-2xl"></div>
         </div>
 
-        <div >
+        <div>
           <Button
             render={<Link href="/dashboard">Continue to Dashboard</Link>}
             nativeButton={false}

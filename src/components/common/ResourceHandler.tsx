@@ -2,9 +2,11 @@ import React from "react";
 import { Spinner } from "../ui/spinner";
 import { Button } from "../ui/button";
 import Link from "next/link";
+import { ShieldUserIcon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
 
 interface Props {
-  state: "loading" | "not_found";
+  state: "loading" | "not_found" | "access_denied";
 }
 
 export const ResourceHandler: React.FC<Props> = ({ state }) => {
@@ -19,7 +21,7 @@ export const ResourceHandler: React.FC<Props> = ({ state }) => {
   if (state === "not_found") {
     return (
       <div className="flex h-screen w-full flex-col items-center justify-center text-center">
-        <h2 className="text-xl font-medium">Resource Not found</h2>
+        <h2 className="mt-2 text-xl font-medium">Resource Not found</h2>
         <p className="text-muted-foreground mt-1 max-w-lg">
           The requested resource could not be found. If you think it&apos;s a
           bug, please submit a{" "}
@@ -29,6 +31,32 @@ export const ResourceHandler: React.FC<Props> = ({ state }) => {
           .
         </p>
 
+        <Button
+          render={<Link href="/">Back to Home</Link>}
+          nativeButton={false}
+          className="mt-5"
+        ></Button>
+      </div>
+    );
+  }
+
+  if (state === "access_denied") {
+    return (
+      <div className="flex h-screen w-full flex-col items-center justify-center text-center">
+        <HugeiconsIcon
+          icon={ShieldUserIcon}
+          size={40}
+          className="text-muted-foreground"
+        />
+        <h2 className="mt-2 text-xl font-medium">Access Denied</h2>
+        <p className="text-muted-foreground mt-1 max-w-lg">
+          Only owners and admins can manage team members. If you think it&apos;s
+          a bug, please submit a{" "}
+          <Link href="/" className="text-primary underline underline-offset-2">
+            bug report
+          </Link>
+          .
+        </p>
         <Button
           render={<Link href="/">Back to Home</Link>}
           nativeButton={false}

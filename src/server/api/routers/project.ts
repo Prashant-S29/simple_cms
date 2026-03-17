@@ -1,4 +1,4 @@
-import { and, count, desc, eq, ilike } from "drizzle-orm";
+import { and, count, desc, eq, ilike, inArray } from "drizzle-orm";
 import { z } from "zod";
 
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
@@ -12,28 +12,30 @@ import {
   UpdateProjectSchema,
 } from "~/zodSchema/project";
 import { errorResponse, getErrorInfo, successResponse } from "~/lib/errors";
+import {
+  requireOrgAccess,
+  requireProjectAccess,
+  resolveOrgMembership,
+} from "~/server/api/membershipGuard";
 
 export const projectRouter = createTRPCRouter({
+  /**
+   * Create a project inside an org.
+   * Allowed for: owner, admin.
+   * Managers cannot create projects.
+   */
   create: protectedProcedure
     .input(CreateProjectSchema)
     .mutation(async ({ ctx, input }) => {
+      const guard = await requireOrgAccess(
+        ctx.db,
+        input.orgId,
+        ctx.session.user.id,
+        "project:create",
+      );
+      if (!guard.ok) return guard.response;
+
       const slug = slugify(input.name);
-
-      // Verify org ownership
-      const [existingOrg] = await ctx.db
-        .select({ id: org.id })
-        .from(org)
-        .where(
-          and(
-            eq(org.id, input.orgId),
-            eq(org.createdById, ctx.session.user.id),
-          ),
-        )
-        .limit(1);
-
-      if (!existingOrg) {
-        return errorResponse(getErrorInfo("org", "NOT_FOUND"));
-      }
 
       // Reject duplicate slugs within the same org
       const [existing] = await ctx.db
@@ -64,15 +66,45 @@ export const projectRouter = createTRPCRouter({
       return successResponse(newProject!, `"${input.name}" has been created.`);
     }),
 
+  /**
+   * List projects for an org.
+   *
+   * - owner / admin  → all projects in the org
+   * - manager        → only projects they have been assigned to
+   */
   getAll: protectedProcedure
     .input(GetProjectsSchema)
     .query(async ({ ctx, input }) => {
       const { page, limit, search, orgId } = input;
       const offset = (page - 1) * limit;
+      const userId = ctx.session.user.id;
+
+      // Resolve membership — guards removed users too
+      const membership = await resolveOrgMembership(ctx.db, orgId, userId);
+
+      if (!membership) {
+        return errorResponse(getErrorInfo("org", "NOT_FOUND"));
+      }
+
+      if (membership.status === "removed") {
+        return errorResponse(getErrorInfo("orgMember", "REMOVED"));
+      }
+
+      // Build a project-id filter for managers
+      const isManager = membership.orgRole === "manager";
+      const assigned = membership.assignedProjectIds;
+
+      // Managers with zero assigned projects see an empty list immediately
+      if (isManager && assigned.length === 0) {
+        return successResponse(
+          { items: [], total: 0, page, limit, hasNext: false, nextPage: null },
+          "Projects fetched successfully.",
+        );
+      }
 
       const whereClause = and(
         eq(project.orgId, orgId),
-        eq(project.createdById, ctx.session.user.id),
+        isManager ? inArray(project.id, assigned) : undefined,
         search ? ilike(project.name, `%${search}%`) : undefined,
       );
 
@@ -114,10 +146,17 @@ export const projectRouter = createTRPCRouter({
       );
     }),
 
+  /**
+   * Fetch a single project by slug + orgId.
+   * Managers can only fetch projects they have been assigned to.
+   */
   getBySlug: protectedProcedure
     .input(GetProjectBySlugSchema)
     .query(async ({ ctx, input }) => {
-      const [result] = await ctx.db
+      const userId = ctx.session.user.id;
+
+      // Look up the project first so we have its ID for the ABAC check
+      const [projectRow] = await ctx.db
         .select({
           id: project.id,
           name: project.name,
@@ -130,26 +169,37 @@ export const projectRouter = createTRPCRouter({
         .from(project)
         .leftJoin(projectMember, eq(projectMember.projectId, project.id))
         .where(
-          and(
-            eq(project.slug, input.slug),
-            eq(project.orgId, input.orgId),
-            eq(project.createdById, ctx.session.user.id),
-          ),
+          and(eq(project.slug, input.slug), eq(project.orgId, input.orgId)),
         )
         .groupBy(project.id)
         .limit(1);
 
-      if (!result) {
+      if (!projectRow) {
         return errorResponse(getErrorInfo("project", "NOT_FOUND"));
       }
 
-      return successResponse(result, "Project fetched successfully.");
+      const guard = await requireProjectAccess(
+        ctx.db,
+        input.orgId,
+        projectRow.id,
+        userId,
+        "project:read",
+      );
+      if (!guard.ok) return guard.response;
+
+      return successResponse(
+        { ...projectRow, myRole: guard.membership.orgRole },
+        "Project fetched successfully.",
+      );
     }),
 
+  /** Fetch a single project by ID. */
   getById: protectedProcedure
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.string().uuid(), orgId: z.string().uuid() }))
     .query(async ({ ctx, input }) => {
-      const [result] = await ctx.db
+      const userId = ctx.session.user.id;
+
+      const [projectRow] = await ctx.db
         .select({
           id: project.id,
           name: project.name,
@@ -161,39 +211,58 @@ export const projectRouter = createTRPCRouter({
         })
         .from(project)
         .leftJoin(projectMember, eq(projectMember.projectId, project.id))
-        .where(
-          and(
-            eq(project.id, input.id),
-            eq(project.createdById, ctx.session.user.id),
-          ),
-        )
+        .where(and(eq(project.id, input.id), eq(project.orgId, input.orgId)))
         .groupBy(project.id)
         .limit(1);
 
-      if (!result) {
+      if (!projectRow) {
         return errorResponse(getErrorInfo("project", "NOT_FOUND"));
       }
 
-      return successResponse(result, "Project fetched successfully.");
+      const guard = await requireProjectAccess(
+        ctx.db,
+        input.orgId,
+        projectRow.id,
+        userId,
+        "project:read",
+      );
+      if (!guard.ok) return guard.response;
+
+      return successResponse(
+        { ...projectRow, myRole: guard.membership.orgRole },
+        "Project fetched successfully.",
+      );
     }),
 
+  /**
+   * Update a project.
+   * owner / admin → can update any project.
+   * manager       → can only update their assigned projects.
+   */
   update: protectedProcedure
     .input(UpdateProjectSchema)
     .mutation(async ({ ctx, input }) => {
-      const [existing] = await ctx.db
-        .select({ id: project.id })
+      const userId = ctx.session.user.id;
+
+      // We need the orgId to run the ABAC check — fetch it first
+      const [projectRow] = await ctx.db
+        .select({ id: project.id, orgId: project.orgId, name: project.name })
         .from(project)
-        .where(
-          and(
-            eq(project.id, input.id),
-            eq(project.createdById, ctx.session.user.id),
-          ),
-        )
+        .where(eq(project.id, input.id))
         .limit(1);
 
-      if (!existing) {
+      if (!projectRow) {
         return errorResponse(getErrorInfo("project", "NOT_FOUND"));
       }
+
+      const guard = await requireProjectAccess(
+        ctx.db,
+        projectRow.orgId,
+        projectRow.id,
+        userId,
+        "project:update",
+      );
+      if (!guard.ok) return guard.response;
 
       const [updated] = await ctx.db
         .update(project)
@@ -206,6 +275,44 @@ export const projectRouter = createTRPCRouter({
         .where(eq(project.id, input.id))
         .returning();
 
-      return successResponse(updated!, `"${updated!.name}" has been updated.`);
+      if (!updated) {
+        return errorResponse(getErrorInfo("project", "UPDATE_FAILED"));
+      }
+
+      return successResponse(updated, `"${updated.name}" has been updated.`);
+    }),
+
+  /**
+   * Delete a project.
+   * owner / admin → can delete any project.
+   * manager       → can only delete their assigned projects.
+   */
+  delete: protectedProcedure
+    .input(z.object({ id: z.string().uuid(), orgId: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id;
+
+      const [projectRow] = await ctx.db
+        .select({ id: project.id, orgId: project.orgId, name: project.name })
+        .from(project)
+        .where(and(eq(project.id, input.id), eq(project.orgId, input.orgId)))
+        .limit(1);
+
+      if (!projectRow) {
+        return errorResponse(getErrorInfo("project", "NOT_FOUND"));
+      }
+
+      const guard = await requireProjectAccess(
+        ctx.db,
+        projectRow.orgId,
+        projectRow.id,
+        userId,
+        "project:delete",
+      );
+      if (!guard.ok) return guard.response;
+
+      await ctx.db.delete(project).where(eq(project.id, input.id));
+
+      return successResponse(null, `"${projectRow.name}" has been deleted.`);
     }),
 });

@@ -11,6 +11,13 @@ export const org = createTable(
     name: d.text().notNull(),
     slug: d.text().notNull().unique(),
 
+    /**
+     * Invite code in the format "CMS-XXXXXX".
+     * Generated deterministically from the org slug at creation time.
+     * Users present this code on /dashboard/org/join to accept an invitation.
+     */
+    inviteCode: d.text("invite_code").notNull().unique(),
+
     createdById: d
       .uuid()
       .notNull()
@@ -24,6 +31,7 @@ export const org = createTable(
   }),
   (t) => [
     index("org_slug_idx").on(t.slug),
+    index("org_invite_code_idx").on(t.inviteCode),
     index("org_created_by_idx").on(t.createdById),
   ],
 );

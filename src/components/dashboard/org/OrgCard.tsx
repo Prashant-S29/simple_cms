@@ -12,7 +12,7 @@ interface OrgCardOrg {
 
 export const OrgCard: React.FC<{ org: OrgCardOrg }> = ({ org }) => (
   <Link href={`/dashboard/org/${org.slug}`} aria-label={org.slug}>
-    <div className="bg-muted  flex cursor-pointer flex-col justify-between rounded-lg p-4 transition-colors">
+    <div className="bg-muted flex cursor-pointer flex-col justify-between rounded-lg p-4 transition-colors">
       <h3 className="leading-tight font-medium">{org.name}</h3>
       <p className="text-muted-foreground mt-3 flex items-center justify-between text-sm">
         <span>{org.projectCount === 1 ? "Project" : "Projects"}</span>
