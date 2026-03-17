@@ -58,7 +58,7 @@ export const AvailableOrgs: React.FC = () => {
       <div data-fetching={isFetching ? "true" : undefined}>
         <div className="bg-sidebar flex items-center justify-between rounded-t-2xl border p-5">
           <section>
-            <h3>Organizations</h3>
+            <h3>Your Organizations</h3>
             <p className="text-muted-foreground">
               All your organizations are listed below.
             </p>
@@ -94,70 +94,72 @@ export const AvailableOrgs: React.FC = () => {
           </section>
         </div>
 
-        <div className="bg-sidebar grid grid-cols-4 gap-2 overflow-hidden rounded-b-2xl border border-t-0 p-2">
-          {isLoading ? (
-            <>
-              {Array.from({ length: 4 }).map((_, index) => (
-                <Skeleton
-                  key={index}
-                  className="bg-muted h-50 w-full rounded-xl"
-                />
-              ))}
-            </>
-          ) : (
-            <>
-              {orgs.length === 0 ? (
-                <div className="col-span-4">
-                  <EmptyState
-                    isFiltered={!!debouncedSearch}
-                    query={debouncedSearch}
+        <div className="bg-sidebar overflow-hidden rounded-b-2xl border border-t-0">
+          <div className="grid grid-cols-4 gap-3 p-3">
+            {isLoading ? (
+              <>
+                {Array.from({ length: 4 }).map((_, index) => (
+                  <Skeleton
+                    key={index}
+                    className="bg-muted h-50 w-full rounded-xl"
                   />
-                </div>
-              ) : (
-                <>
-                  {orgs.map((org) => (
-                    <OrgCard key={org.id} org={org} />
-                  ))}
-                </>
-              )}
-            </>
+                ))}
+              </>
+            ) : (
+              <>
+                {orgs.length === 0 ? (
+                  <div className="col-span-4">
+                    <EmptyState
+                      isFiltered={!!debouncedSearch}
+                      query={debouncedSearch}
+                    />
+                  </div>
+                ) : (
+                  <>
+                    {orgs.map((org) => (
+                      <OrgCard key={org.id} org={org} />
+                    ))}
+                  </>
+                )}
+              </>
+            )}
+          </div>
+
+          {total !== 0 && (
+            <div className="text-muted-foreground flex items-center justify-between border-t px-4 py-2 text-sm">
+              <span>
+                Showing {rangeStart} – {rangeEnd} of {total}
+              </span>
+
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="icon-sm"
+                  disabled={!hasPrev || isFetching}
+                  onClick={() => setPage((p) => p - 1)}
+                  aria-label="Previous page"
+                >
+                  <HugeiconsIcon icon={ArrowLeft01Icon} />
+                </Button>
+
+                <span className="tabular-nums">
+                  {page} / {totalPages}
+                </span>
+
+                <Button
+                  variant="outline"
+                  size="icon-sm"
+                  disabled={!hasNext || isFetching}
+                  onClick={() => setPage((p) => p + 1)}
+                  aria-label="Next page"
+                >
+                  <HugeiconsIcon icon={ArrowRight01Icon} />
+                </Button>
+              </div>
+            </div>
           )}
         </div>
       </div>
-
-      {total !== 0 && (
-        <div className="text-muted-foreground flex items-center justify-between px-5 text-sm">
-          <span>
-            Showing {rangeStart} – {rangeEnd} of {total}
-          </span>
-
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="icon-sm"
-              disabled={!hasPrev || isFetching}
-              onClick={() => setPage((p) => p - 1)}
-              aria-label="Previous page"
-            >
-              <HugeiconsIcon icon={ArrowLeft01Icon} />
-            </Button>
-
-            <span className="tabular-nums">
-              {page} / {totalPages}
-            </span>
-
-            <Button
-              variant="outline"
-              size="icon-sm"
-              disabled={!hasNext || isFetching}
-              onClick={() => setPage((p) => p + 1)}
-              aria-label="Next page"
-            >
-              <HugeiconsIcon icon={ArrowRight01Icon} />
-            </Button>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

@@ -37,7 +37,7 @@ export const Provider: React.FC<{ children: React.ReactNode }> = ({
         defaultTheme="dark"
         disableTransitionOnChange
       >
-        <Toaster />
+        <Toaster richColors/>
         {children}
       </ThemeProvider>
     </TRPCReactProvider>
