@@ -1,5 +1,6 @@
-import { and, count, desc, eq, ilike, isNotNull, or } from "drizzle-orm";
+import { and, count, desc, eq, ilike, inArray, isNotNull, or, sql } from "drizzle-orm";
 import { z } from "zod";
+import { alias } from "drizzle-orm/pg-core";
 
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { org } from "~/server/db/org";
@@ -64,9 +65,6 @@ export const orgRouter = createTRPCRouter({
       return successResponse(newOrg!, `"${input.name}" has been created.`);
     }),
 
-  /**
-   * Returns all orgs the user belongs to.
-   */
   getAll: protectedProcedure
     .input(GetOrgsSchema)
     .query(async ({ ctx, input }) => {
@@ -85,7 +83,8 @@ export const orgRouter = createTRPCRouter({
         search ? ilike(org.name, `%${search}%`) : undefined,
       );
 
-      const [items, totalResult] = await Promise.all([
+      // ── 1. Fetch the org list ────────────────────────────────────────────────
+      const [orgRows, totalResult] = await Promise.all([
         ctx.db
           .selectDistinct({
             id: org.id,
@@ -93,13 +92,10 @@ export const orgRouter = createTRPCRouter({
             slug: org.slug,
             inviteCode: org.inviteCode,
             createdAt: org.createdAt,
-            projectCount: count(project.id),
           })
           .from(org)
           .leftJoin(orgMember, memberJoinCond)
-          .leftJoin(project, eq(project.orgId, org.id))
           .where(whereClause)
-          .groupBy(org.id)
           .orderBy(desc(org.createdAt))
           .limit(limit)
           .offset(offset),
@@ -110,6 +106,64 @@ export const orgRouter = createTRPCRouter({
           .leftJoin(orgMember, memberJoinCond)
           .where(whereClause),
       ]);
+
+      if (orgRows.length === 0) {
+        return successResponse(
+          { items: [], total: 0, page, limit, hasNext: false, nextPage: null },
+          "Organizations fetched successfully.",
+        );
+      }
+
+      const orgIds = orgRows.map((o) => o.id);
+
+      // ── 2. Fetch project counts, admin counts, manager counts in parallel ────
+      const [projectCounts, memberCounts] = await Promise.all([
+        ctx.db
+          .select({
+            orgId: project.orgId,
+            count: count(project.id),
+          })
+          .from(project)
+          .where(inArray(project.orgId, orgIds))
+          .groupBy(project.orgId),
+
+        ctx.db
+          .select({
+            orgId: orgMember.orgId,
+            role: orgMember.role,
+            count: count(orgMember.id),
+          })
+          .from(orgMember)
+          .where(
+            and(
+              inArray(orgMember.orgId, orgIds),
+              eq(orgMember.status, "active"),
+              inArray(orgMember.role, ["admin", "manager"]),
+            ),
+          )
+          .groupBy(orgMember.orgId, orgMember.role),
+      ]);
+
+      // ── 3. Build lookup maps ─────────────────────────────────────────────────
+      const projectCountMap = new Map(
+        projectCounts.map((r) => [r.orgId, r.count]),
+      );
+
+      const adminCountMap = new Map<string, number>();
+      const managerCountMap = new Map<string, number>();
+
+      for (const row of memberCounts) {
+        if (row.role === "admin") adminCountMap.set(row.orgId, row.count);
+        if (row.role === "manager") managerCountMap.set(row.orgId, row.count);
+      }
+
+      // ── 4. Merge ─────────────────────────────────────────────────────────────
+      const items = orgRows.map((o) => ({
+        ...o,
+        projectCount: projectCountMap.get(o.id) ?? 0,
+        adminCount: adminCountMap.get(o.id) ?? 0,
+        managerCount: managerCountMap.get(o.id) ?? 0,
+      }));
 
       const total = totalResult.length;
       const hasNext = offset + items.length < total;
@@ -219,10 +273,6 @@ export const orgRouter = createTRPCRouter({
    * Returns team info for the settings panel.
    *
    * Accessible by all active members (owner, admin, manager).
-   * Returns:
-   *   - total active member count
-   *   - first 5 members (id, name, image) for the avatar stack
-   *   - paginated full member list
    */
   getOrgTeamBySlug: protectedProcedure
     .input(
@@ -236,7 +286,6 @@ export const orgRouter = createTRPCRouter({
       const { slug, page, limit } = input;
       const userId = ctx.session.user.id;
 
-      // ── Resolve org from slug ────────────────────────────────────────────────
       const [orgRow] = await ctx.db
         .select({ id: org.id, name: org.name, slug: org.slug })
         .from(org)
@@ -247,7 +296,6 @@ export const orgRouter = createTRPCRouter({
         return errorResponse(getErrorInfo("org", "NOT_FOUND"));
       }
 
-      // ── Permission check — all roles can read team info ──────────────────────
       const guard = await requireOrgAccess(
         ctx.db,
         orgRow.id,
@@ -256,7 +304,6 @@ export const orgRouter = createTRPCRouter({
       );
       if (!guard.ok) return guard.response;
 
-      // ── Total active member count ────────────────────────────────────────────
       const [countResult] = await ctx.db
         .select({ total: count(orgMember.id) })
         .from(orgMember)
@@ -266,7 +313,6 @@ export const orgRouter = createTRPCRouter({
 
       const totalMembers = countResult?.total ?? 0;
 
-      // ── First 5 avatars for the stacked display ──────────────────────────────
       const avatarMembers = await ctx.db
         .select({
           id: orgMember.id,
@@ -283,7 +329,6 @@ export const orgRouter = createTRPCRouter({
         .orderBy(desc(orgMember.createdAt))
         .limit(5);
 
-      // ── Paginated full member list ───────────────────────────────────────────
       const offset = (page - 1) * limit;
 
       const members = await ctx.db
@@ -311,8 +356,8 @@ export const orgRouter = createTRPCRouter({
       return successResponse(
         {
           totalMembers,
-          avatarMembers, // max 5, for the stacked avatar UI
-          members, // paginated full list
+          avatarMembers,
+          members,
           page,
           limit,
           hasNext,

@@ -42,7 +42,10 @@ interface Props {
 }
 
 export const SettingsPage: React.FC<Props> = ({ slug, userId }) => {
-  const { data: response, isLoading } = api.org.getBySlug.useQuery({ slug });
+  const { data: response, isLoading } = api.org.getBySlug.useQuery(
+    { slug },
+    { enabled: !!slug },
+  );
 
   if (isLoading) {
     return (

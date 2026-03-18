@@ -2,8 +2,7 @@ import { and, count, desc, eq, ilike, inArray } from "drizzle-orm";
 import { z } from "zod";
 
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
-import { project, projectMember } from "~/server/db/project";
-import { org } from "~/server/db/org";
+import { project } from "~/server/db/project";
 import { slugify } from "~/lib/utils";
 import {
   CreateProjectSchema,
@@ -37,7 +36,6 @@ export const projectRouter = createTRPCRouter({
 
       const slug = slugify(input.name);
 
-      // Reject duplicate slugs within the same org
       const [existing] = await ctx.db
         .select({ id: project.id })
         .from(project)
@@ -79,7 +77,6 @@ export const projectRouter = createTRPCRouter({
       const offset = (page - 1) * limit;
       const userId = ctx.session.user.id;
 
-      // Resolve membership — guards removed users too
       const membership = await resolveOrgMembership(ctx.db, orgId, userId);
 
       if (!membership) {
@@ -90,11 +87,9 @@ export const projectRouter = createTRPCRouter({
         return errorResponse(getErrorInfo("orgMember", "REMOVED"));
       }
 
-      // Build a project-id filter for managers
       const isManager = membership.orgRole === "manager";
       const assigned = membership.assignedProjectIds;
 
-      // Managers with zero assigned projects see an empty list immediately
       if (isManager && assigned.length === 0) {
         return successResponse(
           { items: [], total: 0, page, limit, hasNext: false, nextPage: null },
@@ -117,12 +112,9 @@ export const projectRouter = createTRPCRouter({
             description: project.description,
             orgId: project.orgId,
             createdAt: project.createdAt,
-            memberCount: count(projectMember.id),
           })
           .from(project)
-          .leftJoin(projectMember, eq(projectMember.projectId, project.id))
           .where(whereClause)
-          .groupBy(project.id)
           .orderBy(desc(project.createdAt))
           .limit(limit)
           .offset(offset),
@@ -155,7 +147,6 @@ export const projectRouter = createTRPCRouter({
     .query(async ({ ctx, input }) => {
       const userId = ctx.session.user.id;
 
-      // Look up the project first so we have its ID for the ABAC check
       const [projectRow] = await ctx.db
         .select({
           id: project.id,
@@ -164,14 +155,11 @@ export const projectRouter = createTRPCRouter({
           description: project.description,
           orgId: project.orgId,
           createdAt: project.createdAt,
-          memberCount: count(projectMember.id),
         })
         .from(project)
-        .leftJoin(projectMember, eq(projectMember.projectId, project.id))
         .where(
           and(eq(project.slug, input.slug), eq(project.orgId, input.orgId)),
         )
-        .groupBy(project.id)
         .limit(1);
 
       if (!projectRow) {
@@ -207,12 +195,9 @@ export const projectRouter = createTRPCRouter({
           description: project.description,
           orgId: project.orgId,
           createdAt: project.createdAt,
-          memberCount: count(projectMember.id),
         })
         .from(project)
-        .leftJoin(projectMember, eq(projectMember.projectId, project.id))
         .where(and(eq(project.id, input.id), eq(project.orgId, input.orgId)))
-        .groupBy(project.id)
         .limit(1);
 
       if (!projectRow) {
@@ -244,7 +229,6 @@ export const projectRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.session.user.id;
 
-      // We need the orgId to run the ABAC check — fetch it first
       const [projectRow] = await ctx.db
         .select({ id: project.id, orgId: project.orgId, name: project.name })
         .from(project)

@@ -5,7 +5,7 @@ import { checkAuthServer } from "~/lib/auth";
 import { SettingsPage } from "./SettingsPage";
 
 interface Props {
-  params: Promise<{ slug: string }>;
+  params: Promise<{ orgSlug: string }>;
 }
 
 export const metadata: Metadata = {
@@ -14,7 +14,7 @@ export const metadata: Metadata = {
 };
 
 const SettingsPageHandler = async ({ params }: Props) => {
-  const { slug } = await params;
+  const { orgSlug } = await params;
 
   const { session } = await checkAuthServer({
     headers: await headers(),
@@ -23,7 +23,7 @@ const SettingsPageHandler = async ({ params }: Props) => {
 
   if (!session) return <ResourceHandler state="loading" />;
 
-  return <SettingsPage slug={slug} userId={session.user.id} />;
+  return <SettingsPage slug={orgSlug} userId={session.user.id} />;
 };
 
 export default SettingsPageHandler;

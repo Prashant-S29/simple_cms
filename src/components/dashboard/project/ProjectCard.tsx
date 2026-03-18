@@ -9,7 +9,6 @@ interface ProjectCardProject {
   description: string | null;
   orgId: string;
   createdAt: Date;
-  memberCount: number;
 }
 
 interface Props {
@@ -21,7 +20,6 @@ interface Props {
 export const ProjectCard: React.FC<Props> = ({ project, orgSlug, orgId }) => (
   <Link
     href={`/dashboard/org/${orgSlug}/project/${project.slug}?orgId=${orgId}`}
-    aria-label={project.slug}
   >
     <div className="bg-muted flex h-full cursor-pointer flex-col justify-between rounded-lg p-4 pb-3 transition-colors">
       <div>
@@ -32,16 +30,10 @@ export const ProjectCard: React.FC<Props> = ({ project, orgSlug, orgId }) => (
           </p>
         )}
       </div>
-      <div>
-        <p className="text-muted-foreground mt-3 flex items-center justify-between text-sm">
-          <span>{project.memberCount === 1 ? "Member" : "Members"}</span>
-          <span>{project.memberCount}</span>
-        </p>
-        <p className="text-muted-foreground flex items-center justify-between text-sm">
-          <span>Created At</span>
-          <span>{formatDate(project.createdAt)}</span>
-        </p>
-      </div>
+      <p className="text-muted-foreground mt-3 flex items-center justify-between text-sm">
+        <span>Created At</span>
+        <span>{formatDate(project.createdAt)}</span>
+      </p>
     </div>
   </Link>
 );
