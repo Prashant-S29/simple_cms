@@ -6,12 +6,12 @@ import { ResourceHandler } from "~/components/common";
 
 interface Props {
   params: Promise<{
-    slug: string;
+    orgSlug: string;
   }>;
 }
 
 const OrgPageHandler: React.FC<Props> = async ({ params }) => {
-  const { slug } = await params;
+  const { orgSlug } = await params;
 
   const { session } = await checkAuthServer({
     headers: await headers(),
@@ -20,7 +20,7 @@ const OrgPageHandler: React.FC<Props> = async ({ params }) => {
 
   if (!session) return <ResourceHandler state="loading" />;
 
-  return <OrgPage slug={slug} />;
+  return <OrgPage slug={orgSlug} />;
 };
 
 export default OrgPageHandler;

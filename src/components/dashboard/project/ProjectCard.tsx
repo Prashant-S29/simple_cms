@@ -15,11 +15,12 @@ interface ProjectCardProject {
 interface Props {
   project: ProjectCardProject;
   orgSlug: string;
+  orgId: string;
 }
 
-export const ProjectCard: React.FC<Props> = ({ project, orgSlug }) => (
+export const ProjectCard: React.FC<Props> = ({ project, orgSlug, orgId }) => (
   <Link
-    href={`/dashboard/org/${orgSlug}/project/${project.slug}`}
+    href={`/dashboard/org/${orgSlug}/project/${project.slug}?orgId=${orgId}`}
     aria-label={project.slug}
   >
     <div className="bg-muted flex h-full cursor-pointer flex-col justify-between rounded-lg p-4 pb-3 transition-colors">

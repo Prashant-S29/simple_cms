@@ -154,6 +154,7 @@ export const AvailableProjects: React.FC<Props> = ({
                         key={proj.id}
                         project={proj}
                         orgSlug={orgSlug}
+                        orgId={orgId}
                       />
                     ))}
                   </>
