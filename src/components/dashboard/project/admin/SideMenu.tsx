@@ -21,8 +21,15 @@ export const ProjectAdminPageSideMenu: React.FC = () => {
   };
 
   const isActive = (segment: string) => {
-    const base = `/dashboard/org/${orgSlug}/project/${projectSlug}/admin${segment ? `/${segment}` : ""}`;
-    return pathname === base;
+    const base = `/dashboard/org/${orgSlug}/project/${projectSlug}/admin${
+      segment ? `/${segment}` : ""
+    }`;
+
+    if (!segment) {
+      return pathname === base;
+    }
+
+    return pathname.startsWith(base);
   };
 
   return (
@@ -39,7 +46,10 @@ export const ProjectAdminPageSideMenu: React.FC = () => {
               active ? (
                 <span>{navLink.label}</span>
               ) : (
-                <Link href={buildNavHref(navLink.segment)}>
+                <Link
+                  href={buildNavHref(navLink.segment)}
+                  className="text-muted-foreground"
+                >
                   {navLink.label}
                 </Link>
               )

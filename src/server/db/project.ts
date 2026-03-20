@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm";
-import { index, pgEnum } from "drizzle-orm/pg-core";
+import { index, uniqueIndex } from "drizzle-orm/pg-core";
 
 import { createTable, user } from "./schema";
 import { org } from "./org";
@@ -37,6 +37,35 @@ export const project = createTable(
   ],
 );
 
+export const cmsSchema = createTable(
+  "cms_schema",
+  (d) => ({
+    id: d.uuid().primaryKey().defaultRandom(),
+    projectId: d
+      .uuid()
+      .notNull()
+      .references(() => project.id, { onDelete: "cascade" }),
+    title: d.text().notNull(),
+    slug: d.text().notNull(),
+    description: d.text(),
+    schemaStructure: d.jsonb(),
+    createdById: d
+      .uuid()
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    createdAt: d
+      .timestamp({ withTimezone: true })
+      .$defaultFn(() => new Date())
+      .notNull(),
+    updatedAt: d.timestamp({ withTimezone: true }).$onUpdate(() => new Date()),
+  }),
+  (t) => [
+    index("cms_schema_project_idx").on(t.projectId),
+    uniqueIndex("cms_schema_project_slug_idx").on(t.projectId, t.slug),
+  ],
+);
+
+//  relations
 export const orgWithProjectsRelations = relations(org, ({ one, many }) => ({
   createdBy: one(user, {
     fields: [org.createdById],
@@ -52,6 +81,18 @@ export const projectRelations = relations(project, ({ one, many }) => ({
   }),
   createdBy: one(user, {
     fields: [project.createdById],
+    references: [user.id],
+  }),
+  schemas: many(cmsSchema),
+}));
+
+export const cmsSchemaRelations = relations(cmsSchema, ({ one }) => ({
+  project: one(project, {
+    fields: [cmsSchema.projectId],
+    references: [project.id],
+  }),
+  createdBy: one(user, {
+    fields: [cmsSchema.createdById],
     references: [user.id],
   }),
 }));

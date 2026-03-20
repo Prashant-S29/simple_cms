@@ -2,7 +2,7 @@ import { headers } from "next/headers";
 import React from "react";
 import { checkAuthServer } from "~/lib/auth";
 import { ResourceHandler } from "~/components/common";
-import ProjectAdminPage from "./ProjectAdminPage";
+import SchemaPage from "./SchemaPage";
 
 interface Props {
   params: Promise<{
@@ -14,10 +14,7 @@ interface Props {
   }>;
 }
 
-const ProjectAdminPageHandler: React.FC<Props> = async ({
-  params,
-  searchParams,
-}) => {
+const SchemaPageHandler: React.FC<Props> = async ({ params, searchParams }) => {
   const { projectSlug, orgSlug } = await params;
   const { orgId } = await searchParams;
 
@@ -31,12 +28,8 @@ const ProjectAdminPageHandler: React.FC<Props> = async ({
   if (!session) return <ResourceHandler state="loading" />;
 
   return (
-    <ProjectAdminPage
-      projectSlug={projectSlug}
-      orgId={orgId}
-      orgSlug={orgSlug}
-    />
+    <SchemaPage projectSlug={projectSlug} orgId={orgId} orgSlug={orgSlug} />
   );
 };
 
-export default ProjectAdminPageHandler;
+export default SchemaPageHandler;

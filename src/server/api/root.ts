@@ -2,6 +2,7 @@ import { orgRouter } from "~/server/api/routers/org";
 import { orgMemberRouter } from "~/server/api/routers/orgMember";
 import { createCallerFactory, createTRPCRouter } from "~/server/api/trpc";
 import { projectRouter } from "./routers/project";
+import { cmsSchemaRouter } from "./routers/cmsSchema";
 
 /**
  * This is the primary router for your server.
@@ -12,6 +13,7 @@ export const appRouter = createTRPCRouter({
   org: orgRouter,
   project: projectRouter,
   orgMember: orgMemberRouter,
+  cmsSchema: cmsSchemaRouter
 });
 
 // export type definition of API
