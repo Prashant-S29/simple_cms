@@ -10,9 +10,6 @@ import {
 } from "@tanstack/react-table";
 import type { ColumnDef } from "@tanstack/react-table";
 import {
-  Crown02Icon,
-  ShieldUserIcon,
-  UserIcon,
   UserRemoveIcon,
   MoreHorizontalIcon,
   CheckmarkCircle01Icon,
@@ -53,6 +50,7 @@ import {
 } from "~/components/ui/dialog";
 import { Checkbox } from "~/components/ui/checkbox";
 import { useDebounce } from "~/hooks";
+import Image from "next/image";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -92,9 +90,11 @@ const Avatar: React.FC<{
     .slice(0, 2);
   if (image) {
     return (
-      <img
+      <Image
         src={image}
         alt={name}
+        width={200}
+        height={200}
         className="shrink-0 rounded-full object-cover"
         style={{ width: size, height: size }}
       />
@@ -456,7 +456,6 @@ const ActionDialog: React.FC<{
 
 export const TeamMembersTable: React.FC<Props> = ({
   orgId,
-  orgSlug,
   myRole,
   myUserId,
 }) => {
@@ -551,7 +550,7 @@ export const TeamMembersTable: React.FC<Props> = ({
           ),
         }),
       ] as ColumnDef<MemberRow, unknown>[], // ← single cast at the array level
-    [orgId, myRole, myUserId, utils],
+    [columnHelper, orgId, myRole, myUserId, utils.orgMember.getMembers],
   );
 
   const table = useReactTable({

@@ -150,12 +150,14 @@ export const FieldNode: React.FC<Props> = ({
     if (!childField) return;
 
     if (childField.type === "object") {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { [grandchildKey]: _, ...rest } = childField.fields ?? {};
       onChildChange(fieldKey, childKey, { ...childField, fields: rest });
     } else if (
       childField.type === "array" &&
       childField.itemType === "object"
     ) {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { [grandchildKey]: _, ...rest } = childField.fields ?? {};
       onChildChange(fieldKey, childKey, {
         ...childField,

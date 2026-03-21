@@ -32,6 +32,7 @@ export const InviteMemberForm: React.FC<Props> = ({ orgId, onSuccess }) => {
   const utils = api.useUtils();
 
   const form = useForm<InviteFormValues>({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     resolver: zodResolver(InviteMemberSchema) as any,
     defaultValues: {
       orgId,

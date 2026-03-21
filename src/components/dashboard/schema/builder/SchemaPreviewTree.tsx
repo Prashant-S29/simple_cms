@@ -11,7 +11,6 @@ import {
   Image01Icon,
   FolderLibraryIcon,
   ListViewIcon,
-  File01Icon,
 } from "@hugeicons/core-free-icons";
 import type { FieldDefinition, SchemaStructure } from "~/zodSchema/cmsSchema";
 import { cn } from "~/lib/utils";
@@ -95,16 +94,20 @@ const FieldNodePreview: React.FC<FieldNodePreviewProps> = ({
         </span>
 
         <HugeiconsIcon
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           icon={meta.icon as any}
           size={16}
           className={meta.color}
         />
 
-        <code className="text-foreground text-sm font-medium whitespace-nowrap">{fieldKey}</code>
-        <span className="text-muted-foreground text-sm whitespace-nowrap">{field.label}</span>
-        
-        
-        <span className="bg-muted text-muted-foreground whitespace-nowrap ml-auto rounded px-2 py-0.5 font-mono text-xs">
+        <code className="text-foreground text-sm font-medium whitespace-nowrap">
+          {fieldKey}
+        </code>
+        <span className="text-muted-foreground text-sm whitespace-nowrap">
+          {field.label}
+        </span>
+
+        <span className="bg-muted text-muted-foreground ml-auto rounded px-2 py-0.5 font-mono text-xs whitespace-nowrap">
           {field.type}
           {field.type === "array" && ` of ${field.itemType}`}
         </span>
@@ -150,7 +153,7 @@ const FileBadge: React.FC<{
   field: Extract<FieldDefinition, { type: "file" }>;
 }> = ({ field }) => {
   return (
-    <div className="flex items-center gap-1 min-w-fit whitespace-nowrap">
+    <div className="flex min-w-fit items-center gap-1 whitespace-nowrap">
       {field.multiple && (
         <span className="rounded bg-blue-500/10 px-2 py-0.5 text-xs text-blue-600">
           multiple

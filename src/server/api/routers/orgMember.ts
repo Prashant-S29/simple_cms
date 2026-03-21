@@ -15,7 +15,7 @@ import {
   requireOrgAccess,
   resolveOrgMembership,
 } from "~/server/api/membershipGuard";
-import { sendInvitationEmail } from "~/lib/mail";
+// import { sendInvitationEmail } from "~/lib/mail";
 import { and, count, desc, eq, ilike, inArray, or } from "drizzle-orm";
 
 import {
@@ -180,7 +180,7 @@ export const orgMemberRouter = createTRPCRouter({
 
       // ── Send invitation email ────────────────────────────────────────────────
       try {
-        await sendInvitationEmail({
+        console.log(`[EMAIL] invitation email`, {
           email,
           orgName: orgRow.name,
           inviteCode: orgRow.inviteCode,
@@ -188,6 +188,15 @@ export const orgMemberRouter = createTRPCRouter({
           inviterName: ctx.session.user.name,
           expiresAt,
         });
+
+        // await sendInvitationEmail({
+        //   email,
+        //   orgName: orgRow.name,
+        //   inviteCode: orgRow.inviteCode,
+        //   role,
+        //   inviterName: ctx.session.user.name,
+        //   expiresAt,
+        // });
       } catch {
         // Roll back the invitation if the email fails
         await ctx.db
@@ -869,7 +878,7 @@ export const orgMemberRouter = createTRPCRouter({
 
       // ── Resend email ─────────────────────────────────────────────────────────
       try {
-        await sendInvitationEmail({
+        console.log(`[RESEND EMAIL] invitation email`, {
           email: original.email,
           orgName: orgRow.name,
           inviteCode: orgRow.inviteCode,
@@ -877,6 +886,14 @@ export const orgMemberRouter = createTRPCRouter({
           inviterName: ctx.session.user.name,
           expiresAt,
         });
+        // await sendInvitationEmail({
+        //   email: original.email,
+        //   orgName: orgRow.name,
+        //   inviteCode: orgRow.inviteCode,
+        //   role: original.role,
+        //   inviterName: ctx.session.user.name,
+        //   expiresAt,
+        // });
       } catch {
         await ctx.db
           .delete(orgInvitation)

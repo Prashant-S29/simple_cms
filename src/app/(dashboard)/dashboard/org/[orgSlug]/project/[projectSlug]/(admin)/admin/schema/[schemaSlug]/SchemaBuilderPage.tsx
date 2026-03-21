@@ -57,7 +57,7 @@ const SchemaBuilderPage: React.FC<Props> = ({
     if (schemaResponse?.data?.schemaStructure && draft === null) {
       setDraft(schemaResponse.data.schemaStructure as SchemaStructure);
     }
-  }, [schemaResponse]);
+  }, [schemaResponse, draft]);
 
   const utils = api.useUtils();
 
@@ -149,8 +149,8 @@ const SchemaBuilderPage: React.FC<Props> = ({
 
       <div className="p-3">
         {viewTab === "preview" ? (
-          <div className="bg-card rounded-2xl border p-6">
-            <h3 className="mb-4 font-medium">Schema Structure Preview</h3>
+          <div className="bg-card rounded-xl border px-4 py-3">
+            <h3 className="font-medium">Schema Structure Preview</h3>
             {draft ? (
               <SchemaPreviewTree structure={draft} />
             ) : (

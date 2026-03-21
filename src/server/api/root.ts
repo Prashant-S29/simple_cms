@@ -13,7 +13,7 @@ export const appRouter = createTRPCRouter({
   org: orgRouter,
   project: projectRouter,
   orgMember: orgMemberRouter,
-  cmsSchema: cmsSchemaRouter
+  cmsSchema: cmsSchemaRouter,
 });
 
 // export type definition of API

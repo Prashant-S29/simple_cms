@@ -98,6 +98,10 @@ function makeFileVariant(fileType: string, formats: string[]): FileVariant {
  *   3. Content:     string (short/long), array, object, fallback
  */
 function inferField(key: string, value: unknown): FieldDefinition {
+  if (/alt/i.test(key)) {
+    return { type: "string", label: labelFromKey(key) };
+  }
+
   // ── null / undefined ──────────────────────────────────────────────────────
   if (value === null || value === undefined) {
     // Even for null, check key pattern — it might be an optional image
@@ -236,6 +240,7 @@ function inferFields(
   obj: Record<string, unknown>,
 ): Record<string, FieldDefinition> {
   const result: Record<string, FieldDefinition> = {};
+
   for (const [key, value] of Object.entries(obj)) {
     result[key] = inferField(key, value);
   }

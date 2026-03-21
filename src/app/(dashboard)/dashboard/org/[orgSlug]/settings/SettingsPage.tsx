@@ -33,6 +33,7 @@ import type { OrgRole } from "~/lib/permissions";
 
 import { TeamMembersTable } from "~/components/dashboard/team/TeamMembersTable";
 import { TeamInvitationsTable } from "~/components/dashboard/team/TeamInvitationsTable";
+import Image from "next/image";
 
 // ─── Settings Page ────────────────────────────────────────────────────────────
 
@@ -216,8 +217,10 @@ const TeamSummaryPanel: React.FC<{ slug: string }> = ({ slug }) => {
               }}
             >
               {member.image ? (
-                <img
+                <Image
                   src={member.image}
+                  width={40}
+                  height={40}
                   alt={member.name ?? "Member"}
                   className="size-full object-cover"
                 />

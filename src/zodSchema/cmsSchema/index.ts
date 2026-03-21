@@ -115,12 +115,36 @@ export const CreateCmsSchemaSchema = z.object({
   description: z.string().max(500, "Max 500 characters").optional(),
 });
 
+export const BulkCreateItemSchema = z.object({
+  title: z.string().min(1, "Title is required").max(100, "Max 100 characters"),
+  description: z.string().max(500, "Max 500 characters").optional(),
+  schemaStructure: SchemaStructureSchema,
+});
+
+export const BulkCreateCmsSchemaSchema = z.object({
+  projectId: z.string().uuid(),
+  orgId: z.string().uuid(),
+  items: z
+    .array(BulkCreateItemSchema)
+    .min(1, "At least one schema is required")
+    .max(50, "Maximum 50 schemas per bulk creation"),
+});
+
+export const ResetSchemaStructureSchema = z.object({
+  id: z.string().uuid(),
+  projectId: z.string().uuid(),
+  orgId: z.string().uuid(),
+});
+
 export const GetCmsSchemasSchema = z.object({
   projectId: z.string().uuid(),
   orgId: z.string().uuid(),
   page: z.number().int().min(1).default(1),
   limit: z.number().int().min(1).max(100).default(10),
   search: z.string().optional(),
+  sortBy: z.enum(["createdAt", "title"]).default("createdAt"),
+  sortOrder: z.enum(["asc", "desc"]).default("desc"),
+  noStructureFirst: z.boolean().default(false),
 });
 
 export const GetCmsSchemaBySlugSchema = z.object({
@@ -149,6 +173,11 @@ export const SaveSchemaStructureSchema = z.object({
   orgId: z.string().uuid(),
   schemaStructure: SchemaStructureSchema,
 });
+
+export type BulkCreateItemSchemaType = z.infer<typeof BulkCreateItemSchema>;
+export type BulkCreateCmsSchemaSchemaType = z.infer<
+  typeof BulkCreateCmsSchemaSchema
+>;
 
 // ─── Inferred types ───────────────────────────────────────────────────────────
 

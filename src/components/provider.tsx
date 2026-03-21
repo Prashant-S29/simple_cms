@@ -1,6 +1,4 @@
 "use client";
-
-import { ThemeProvider } from "next-themes";
 import { useMount, useIsMobile } from "~/hooks";
 import { Toaster } from "sonner";
 import { TRPCReactProvider } from "~/trpc/react";
@@ -33,16 +31,10 @@ export const Provider: React.FC<{ children: React.ReactNode }> = ({
 
   return (
     <TRPCReactProvider>
-      <ThemeProvider
-        attribute="class"
-        defaultTheme="dark"
-        disableTransitionOnChange
-      >
-        <TooltipProvider>
-          <Toaster richColors />
-          {children}
-        </TooltipProvider>
-      </ThemeProvider>
+      <TooltipProvider>
+        <Toaster richColors />
+        {children}
+      </TooltipProvider>
     </TRPCReactProvider>
   );
 };

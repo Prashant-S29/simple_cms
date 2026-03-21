@@ -6,7 +6,7 @@ import { cn } from "~/lib/utils";
 import { api } from "~/trpc/react";
 import { useDebounce } from "~/hooks";
 import { PAGINATION_LIMIT } from "~/lib/constants";
-import { Button, buttonVariants } from "~/components/ui/button";
+import { buttonVariants } from "~/components/ui/button";
 import {
   Command,
   CommandEmpty,

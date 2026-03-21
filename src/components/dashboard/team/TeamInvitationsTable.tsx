@@ -18,8 +18,6 @@ import {
   AlertCircleIcon,
   MoreHorizontalIcon,
   SearchIcon,
-  ShieldUserIcon,
-  UserIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 
@@ -42,7 +40,6 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "~/components/ui/dialog";
@@ -380,6 +377,7 @@ export const TeamInvitationsTable: React.FC<Props> = ({ orgId }) => {
           },
         }),
       ] as ColumnDef<InvitationRow, unknown>[],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
   );
 

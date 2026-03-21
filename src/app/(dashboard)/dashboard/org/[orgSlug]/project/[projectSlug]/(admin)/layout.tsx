@@ -22,7 +22,7 @@ export default function ProjectAdminPageLayout({ children }: Props) {
       <ProjectAdminHeader />
       <main className="flex h-full w-full">
         <ProjectAdminPageSideMenu />
-        <div className="h-full w-full p-2 pt-18">
+        <div className="h-full min-w-0 flex-1 p-2 pt-18">
           <div className="bg-secondary h-full w-full overflow-y-scroll rounded-2xl">
             {children}
           </div>

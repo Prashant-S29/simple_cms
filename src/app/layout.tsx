@@ -1,10 +1,9 @@
 import "~/styles/globals.css";
-
 import { type Metadata } from "next";
-
 import { cn } from "~/lib/utils";
 import { figtree, geist } from "~/lib/font";
 import { Provider } from "~/components/provider";
+import { ThemeProvider } from "~/components/theme-provider";
 
 export const metadata: Metadata = {
   title: "Create T3 App",
@@ -18,10 +17,13 @@ export default function RootLayout({
   return (
     <html
       lang="en"
+      suppressHydrationWarning
       className={cn(geist.variable, "font-sans", figtree.variable)}
     >
       <body>
-        <Provider>{children}</Provider>
+        <ThemeProvider>
+          <Provider>{children}</Provider>
+        </ThemeProvider>
       </body>
     </html>
   );

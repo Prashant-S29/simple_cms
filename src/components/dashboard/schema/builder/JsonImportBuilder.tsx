@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { toast } from "sonner";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
+  ArrowDown01Icon,
   ArrowRight01Icon,
   Cancel01Icon,
   TickDouble01Icon,
@@ -31,24 +32,34 @@ export const JsonImportBuilder: React.FC<Props> = ({
   const [parseState, setParseState] = useState<ParseState>("idle");
   const [parseError, setParseError] = useState<string | null>(null);
   const [parsed, setParsed] = useState<SchemaStructure | null>(null);
+  // Collapsed once valid parse succeeds, expanded while editing or on error
+  const [jsonExpanded, setJsonExpanded] = useState(true);
 
-  const handleParse = () => {
-    setParseError(null);
-    setParsed(null);
-    setParseState("idle");
-
-    if (!raw.trim()) {
-      setParseError("Paste your JSON first.");
-      setParseState("error");
+  const tryParse = (value: string) => {
+    if (!value.trim()) {
+      setParseState("idle");
+      setParseError(null);
+      setParsed(null);
+      setJsonExpanded(true);
       return;
     }
 
     let json: unknown;
     try {
-      json = JSON.parse(raw);
+      json = JSON.parse(value);
     } catch {
-      setParseError("Invalid JSON — check for syntax errors.");
-      setParseState("error");
+      // Not valid JSON yet — could still be mid-typing, stay idle
+      // Only show error if the input looks complete (ends with } or ])
+      const trimmed = value.trim();
+      if (trimmed.endsWith("}") || trimmed.endsWith("]")) {
+        setParseState("error");
+        setParseError("Invalid JSON — check for syntax errors.");
+      } else {
+        setParseState("idle");
+        setParseError(null);
+      }
+      setParsed(null);
+      setJsonExpanded(true);
       return;
     }
 
@@ -56,20 +67,31 @@ export const JsonImportBuilder: React.FC<Props> = ({
       const structure = jsonToSchemaStructure(json);
       setParsed(structure);
       setParseState("parsed");
+      setParseError(null);
+      // Auto-collapse the JSON section on successful parse
+      setJsonExpanded(false);
     } catch (err) {
-      setParseError(err instanceof Error ? err.message : "Failed to parse.");
       setParseState("error");
+      setParseError(err instanceof Error ? err.message : "Failed to parse.");
+      setParsed(null);
+      setJsonExpanded(true);
     }
+  };
+
+  const handleChange = (value: string) => {
+    setRaw(value);
+    tryParse(value);
   };
 
   const handleApply = () => {
     if (!parsed) return;
     onApply(parsed);
     toast.success("Schema imported from JSON. Review and save.");
-    // Reset so the textarea is clear for next import
     setRaw("");
     setParsed(null);
     setParseState("idle");
+    setParseError(null);
+    setJsonExpanded(true);
   };
 
   const handleReset = () => {
@@ -77,74 +99,95 @@ export const JsonImportBuilder: React.FC<Props> = ({
     setParsed(null);
     setParseError(null);
     setParseState("idle");
+    setJsonExpanded(true);
   };
 
   return (
-    <div className="flex flex-col">
-      <div className="bg-card rounded-t-xl p-5 border-b">
-        {/*<h3 className="font-medium">Import from JSON</h3>*/}
-        <p className="text-muted-foreground mt-1 text-sm">
+    <div className="flex flex-col gap-3">
+      {/* ── Description ───────────────────────────────────────────────────── */}
+      <div className="bg-card rounded-xl border p-4">
+        <p className="text-muted-foreground text-sm">
           Paste your existing locale JSON (e.g.{" "}
           <code className="bg-muted rounded px-1 py-0.5 font-mono text-xs">
             aboutPage.json
           </code>
-          ) and we will infer the schema structure automatically. You can review
+          ) — the schema is inferred automatically as you type. You can review
           and correct field types before applying.
         </p>
       </div>
 
-      <div className="bg-card rounded-b-xl p-5">
-        <div className="mb-3 flex items-center justify-between">
-          <h4 className="text-sm font-medium">Paste JSON</h4>
+      {/* ── Collapsible JSON input ─────────────────────────────────────────── */}
+      <div className="bg-card rounded-xl border">
+        {/* Header — always visible, click to expand/collapse */}
+        <div
+          className="flex w-full cursor-pointer items-center justify-between px-4 py-3 text-left"
+          onClick={() => setJsonExpanded((v) => !v)}
+        >
           <div className="flex items-center gap-2">
-            {parseState !== "idle" && (
-              <Button variant="ghost" size="sm" onClick={handleReset}>
-                <HugeiconsIcon icon={Cancel01Icon} />
-                Reset
+            <span className="text-sm font-medium">JSON Input</span>
+            {parseState === "parsed" && (
+              <span className="rounded-full bg-green-500/10 px-2 py-0.5 text-xs font-medium text-green-600">
+                Parsed
+              </span>
+            )}
+            {parseState === "error" && (
+              <span className="bg-destructive/10 text-destructive rounded-full px-2 py-0.5 text-xs font-medium">
+                Error
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            {raw && (
+              <Button
+                size="icon-xs"
+                variant="ghost"
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleReset();
+                }}
+                className="text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <HugeiconsIcon icon={Cancel01Icon} size={14} />
               </Button>
             )}
-            <Button
-              size="sm"
-              onClick={handleParse}
-              disabled={readOnly || !raw.trim()}
-            >
-              <HugeiconsIcon icon={ArrowRight01Icon} />
-              Parse
-            </Button>
+            <HugeiconsIcon
+              icon={jsonExpanded ? ArrowDown01Icon : ArrowRight01Icon}
+              size={14}
+              className="text-muted-foreground"
+            />
           </div>
         </div>
 
-        <Textarea
-          value={raw}
-          onChange={(e) => {
-            setRaw(e.target.value);
-            // Clear error as user types
-            if (parseState === "error") {
-              setParseState("idle");
-              setParseError(null);
-            }
-          }}
-          placeholder={`{\n  "hero": {\n    "title": "Hello World",\n    "description": "..."\n  }\n}`}
-          rows={14}
-          disabled={readOnly}
-          className="font-mono text-xs"
-          aria-invalid={parseState === "error"}
-        />
-
-        {parseState === "error" && parseError && (
-          <p className="text-destructive mt-2 text-sm">{parseError}</p>
+        {/* Collapsible textarea */}
+        {jsonExpanded && (
+          <div className="border-t px-4 pt-3 pb-4">
+            <Textarea
+              value={raw}
+              onChange={(e) => handleChange(e.target.value)}
+              placeholder={`{\n  "hero": {\n    "title": "Hello World",\n    "description": "..."\n  }\n}`}
+              rows={14}
+              disabled={readOnly}
+              className="font-mono text-xs"
+              aria-invalid={parseState === "error"}
+              autoFocus
+            />
+            {parseState === "error" && parseError && (
+              <p className="text-destructive mt-2 text-sm">{parseError}</p>
+            )}
+          </div>
         )}
       </div>
 
-      {/* ── Parsed preview ────────────────────────────────────────────── */}
+      {/* ── Parsed preview ─────────────────────────────────────────────────── */}
       {parseState === "parsed" && parsed && (
-        <div className="bg-card rounded-2xl border p-5 mt-3">
+        <div className="bg-card rounded-xl border p-5">
           <div className="mb-4 flex items-center justify-between">
             <div>
               <h4 className="font-medium">Parsed Structure</h4>
               <p className="text-muted-foreground mt-0.5 text-sm">
-                Review the inferred field types. You can switch to Manual mode
-                after applying to fine-tune individual fields.
+                Review the inferred field types. Switch to Manual mode after
+                applying to fine-tune individual fields.
               </p>
             </div>
             <Button size="sm" onClick={handleApply}>
@@ -152,12 +195,11 @@ export const JsonImportBuilder: React.FC<Props> = ({
               Apply to Builder
             </Button>
           </div>
-
           <SchemaPreviewTree structure={parsed} />
         </div>
       )}
 
-      {/* ── Current draft notice ──────────────────────────────────────── */}
+      {/* ── Existing draft warning ──────────────────────────────────────────── */}
       {currentDraft && parseState === "idle" && (
         <div className="bg-muted rounded-xl px-4 py-3">
           <p className="text-muted-foreground text-sm">

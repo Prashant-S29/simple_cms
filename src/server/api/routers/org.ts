@@ -1,6 +1,14 @@
-import { and, count, desc, eq, ilike, inArray, isNotNull, or, sql } from "drizzle-orm";
+import {
+  and,
+  count,
+  desc,
+  eq,
+  ilike,
+  inArray,
+  isNotNull,
+  or,
+} from "drizzle-orm";
 import { z } from "zod";
-import { alias } from "drizzle-orm/pg-core";
 
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { org } from "~/server/db/org";

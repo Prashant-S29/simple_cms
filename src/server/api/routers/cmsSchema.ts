@@ -1,14 +1,16 @@
-import { and, count, desc, eq, ilike } from "drizzle-orm";
+import { and, asc, count, desc, eq, ilike, inArray, sql } from "drizzle-orm";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { cmsSchema } from "~/server/db/project";
 import { slugify } from "~/lib/utils";
 import { errorResponse, getErrorInfo, successResponse } from "~/lib/errors";
 import { requireProjectAccess } from "~/server/api/membershipGuard";
 import {
+  BulkCreateCmsSchemaSchema,
   CreateCmsSchemaSchema,
   DeleteCmsSchemaSchema,
   GetCmsSchemaBySlugSchema,
   GetCmsSchemasSchema,
+  ResetSchemaStructureSchema,
   SaveSchemaStructureSchema,
   UpdateCmsSchemaSchema,
 } from "~/zodSchema/cmsSchema";
@@ -70,13 +72,141 @@ export const cmsSchemaRouter = createTRPCRouter({
     }),
 
   /**
+   * Bulk create multiple schemas in a single transaction.
+   *
+   * Validation order:
+   *   1. ABAC — caller must be owner or admin (project:update)
+   *   2. Intra-batch uniqueness — no two items in the request share a slug
+   *   3. DB uniqueness — none of the slugs already exist in this project
+   *
+   * Returns a summary with created count, failed items with reasons,
+   * and the successfully inserted schema rows.
+   *
+   * Uses a transaction so partial failures don't leave the DB in a bad state.
+   * If any item fails the pre-flight checks the whole batch is rejected before
+   * touching the DB. Individual DB-level errors are caught per-item inside the
+   * transaction and collected rather than aborting the whole batch.
+   */
+  bulkCreate: protectedProcedure
+    .input(BulkCreateCmsSchemaSchema)
+    .mutation(async ({ ctx, input }) => {
+      const { projectId, orgId, items } = input;
+
+      // ── 1. Permission check ────────────────────────────────────────────────
+      const guard = await requireProjectAccess(
+        ctx.db,
+        orgId,
+        projectId,
+        ctx.session.user.id,
+        "project:update",
+      );
+      if (!guard.ok) return guard.response;
+
+      // ── 2. Build slug list and check intra-batch uniqueness ────────────────
+      const slugMap = new Map<string, string>(); // slug → title
+      const duplicatesInBatch: string[] = [];
+
+      for (const item of items) {
+        const slug = slugify(item.title);
+        if (slugMap.has(slug)) {
+          duplicatesInBatch.push(`"${item.title}"`);
+        } else {
+          slugMap.set(slug, item.title);
+        }
+      }
+
+      if (duplicatesInBatch.length > 0) {
+        return errorResponse(
+          getErrorInfo("general", "VALIDATION_ERROR", {
+            message: `Duplicate titles in batch: ${duplicatesInBatch.join(", ")}. Each schema must have a unique title.`,
+          }),
+        );
+      }
+
+      const slugsToCreate = Array.from(slugMap.keys());
+
+      // ── 3. Check against existing schemas in the project ───────────────────
+      const existingRows = await ctx.db
+        .select({ slug: cmsSchema.slug, title: cmsSchema.title })
+        .from(cmsSchema)
+        .where(
+          and(
+            eq(cmsSchema.projectId, projectId),
+            inArray(cmsSchema.slug, slugsToCreate),
+          ),
+        );
+
+      if (existingRows.length > 0) {
+        const conflicting = existingRows.map((r) => `"${r.title}"`).join(", ");
+        return errorResponse(
+          getErrorInfo("general", "VALIDATION_ERROR", {
+            message: `The following schemas already exist in this project: ${conflicting}. Remove or rename them before importing.`,
+          }),
+        );
+      }
+
+      // ── 4. Insert all in a transaction ─────────────────────────────────────
+      const created: (typeof cmsSchema.$inferSelect)[] = [];
+      const failed: { title: string; reason: string }[] = [];
+
+      await ctx.db.transaction(async (tx) => {
+        for (const item of items) {
+          const slug = slugify(item.title);
+          try {
+            const [inserted] = await tx
+              .insert(cmsSchema)
+              .values({
+                projectId,
+                title: item.title,
+                slug,
+                description: item.description,
+                schemaStructure: item.schemaStructure,
+                createdById: ctx.session.user.id,
+              })
+              .returning();
+
+            if (inserted) created.push(inserted);
+          } catch (err) {
+            // Catch individual insert errors (e.g. race condition duplicate)
+            // without rolling back the whole batch
+            failed.push({
+              title: item.title,
+              reason:
+                err instanceof Error ? err.message : "Unknown error occurred",
+            });
+          }
+        }
+      });
+
+      return successResponse(
+        {
+          created: created.length,
+          failed,
+          items: created,
+        },
+        failed.length === 0
+          ? `${created.length} schema${created.length === 1 ? "" : "s"} created successfully.`
+          : `${created.length} created, ${failed.length} failed.`,
+      );
+    }),
+
+  /**
    * List all schemas for a project.
    * owner / admin / manager (if assigned) can read.
    */
   getAll: protectedProcedure
     .input(GetCmsSchemasSchema)
     .query(async ({ ctx, input }) => {
-      const { projectId, orgId, page, limit, search } = input;
+      const {
+        projectId,
+        orgId,
+        page,
+        limit,
+        search,
+        sortBy,
+        sortOrder,
+        noStructureFirst,
+      } = input;
       const offset = (page - 1) * limit;
 
       const guard = await requireProjectAccess(
@@ -93,6 +223,22 @@ export const cmsSchemaRouter = createTRPCRouter({
         search ? ilike(cmsSchema.title, `%${search}%`) : undefined,
       );
 
+      // Build order by — noStructureFirst pins null schemaStructure rows to top
+      const titleOrder =
+        sortOrder === "asc" ? asc(cmsSchema.title) : desc(cmsSchema.title);
+      const createdAtOrder =
+        sortOrder === "asc"
+          ? asc(cmsSchema.createdAt)
+          : desc(cmsSchema.createdAt);
+      const primaryOrder = sortBy === "title" ? titleOrder : createdAtOrder;
+
+      // noStructureFirst: NULLs first via CASE WHEN
+      const structureOrder = sql`CASE WHEN ${cmsSchema.schemaStructure} IS NULL THEN 0 ELSE 1 END`;
+
+      const orderBy = noStructureFirst
+        ? [structureOrder, primaryOrder]
+        : [primaryOrder];
+
       const [items, totalResult] = await Promise.all([
         ctx.db
           .select({
@@ -106,7 +252,7 @@ export const cmsSchemaRouter = createTRPCRouter({
           })
           .from(cmsSchema)
           .where(whereClause)
-          .orderBy(desc(cmsSchema.createdAt))
+          .orderBy(...orderBy)
           .limit(limit)
           .offset(offset),
 
@@ -116,7 +262,6 @@ export const cmsSchemaRouter = createTRPCRouter({
       const total = totalResult[0]?.total ?? 0;
       const hasNext = offset + items.length < total;
 
-      // Normalize hasStructure to a boolean — client doesn't need the raw jsonb
       const normalized = items.map((s) => ({
         ...s,
         hasStructure: s.hasStructure !== null,
@@ -169,10 +314,6 @@ export const cmsSchemaRouter = createTRPCRouter({
       return successResponse(row, "Schema fetched successfully.");
     }),
 
-  /**
-   * Update title / description of a schema.
-   * Only owner and admin (project:update).
-   */
   update: protectedProcedure
     .input(UpdateCmsSchemaSchema)
     .mutation(async ({ ctx, input }) => {
@@ -207,14 +348,59 @@ export const cmsSchemaRouter = createTRPCRouter({
             title: input.title,
             slug: slugify(input.title),
           }),
+          // undefined = not provided (leave as-is)
+          // empty string = explicitly cleared → set to null
+          // any other string = update to that value
           ...(input.description !== undefined && {
-            description: input.description,
+            description: input.description?.trim() || null,
           }),
         })
         .where(eq(cmsSchema.id, input.id))
         .returning();
 
       return successResponse(updated!, "Schema updated successfully.");
+    }),
+  /**
+   * Reset (empty) a schema's structure back to null.
+   * Only owner and admin (project:update).
+   */
+  resetStructure: protectedProcedure
+    .input(ResetSchemaStructureSchema)
+    .mutation(async ({ ctx, input }) => {
+      const guard = await requireProjectAccess(
+        ctx.db,
+        input.orgId,
+        input.projectId,
+        ctx.session.user.id,
+        "project:update",
+      );
+      if (!guard.ok) return guard.response;
+
+      const [existing] = await ctx.db
+        .select({ id: cmsSchema.id, title: cmsSchema.title })
+        .from(cmsSchema)
+        .where(
+          and(
+            eq(cmsSchema.id, input.id),
+            eq(cmsSchema.projectId, input.projectId),
+          ),
+        )
+        .limit(1);
+
+      if (!existing) {
+        return errorResponse(getErrorInfo("project", "NOT_FOUND"));
+      }
+
+      const [updated] = await ctx.db
+        .update(cmsSchema)
+        .set({ schemaStructure: null })
+        .where(eq(cmsSchema.id, input.id))
+        .returning();
+
+      return successResponse(
+        updated!,
+        `Schema "${existing.title}" has been reset.`,
+      );
     }),
 
   /**

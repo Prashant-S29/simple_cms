@@ -42,6 +42,7 @@ export const ManualBuilder: React.FC<Props> = ({
   };
 
   const handleDeleteRoot = (key: string) => {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { [key]: _, ...rest } = rootFields;
     emitChange(rest);
   };
@@ -74,12 +75,14 @@ export const ManualBuilder: React.FC<Props> = ({
     if (!parent) return;
 
     if (parent.type === "object") {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { [childKey]: _, ...rest } = parent.fields ?? {};
       emitChange({
         ...rootFields,
         [parentKey]: { ...parent, fields: rest },
       });
     } else if (parent.type === "array" && parent.itemType === "object") {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { [childKey]: _, ...rest } = parent.fields ?? {};
       emitChange({
         ...rootFields,

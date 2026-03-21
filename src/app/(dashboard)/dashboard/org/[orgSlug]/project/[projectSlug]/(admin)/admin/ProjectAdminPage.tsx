@@ -11,7 +11,7 @@ interface Props {
   orgId: string;
 }
 
-const ProjectAdminPage: React.FC<Props> = ({ projectSlug, orgId, orgSlug }) => {
+const ProjectAdminPage: React.FC<Props> = ({ projectSlug, orgId }) => {
   const { data: response, isLoading } = api.project.getBySlug.useQuery({
     slug: projectSlug,
     orgId,

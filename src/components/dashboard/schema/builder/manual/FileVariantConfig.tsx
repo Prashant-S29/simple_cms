@@ -5,7 +5,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { AddCircleIcon, Cancel01Icon } from "@hugeicons/core-free-icons";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
-import { Field, FieldLabel, FieldError } from "~/components/ui/field";
+import { Field, FieldLabel } from "~/components/ui/field";
 import { Checkbox } from "~/components/ui/checkbox";
 import {
   FILE_TYPES,
