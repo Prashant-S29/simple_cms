@@ -4,7 +4,7 @@ import {
   ProjectAdminHeader,
   ProjectAdminPageSideMenu,
 } from "~/components/dashboard/project/admin";
-// import { ScrollContainer } from "~/components/common";
+import { AdminGuard } from "~/components/dashboard/project/admin";
 
 export const metadata: Metadata = {
   title: "Create T3 App",
@@ -18,16 +18,18 @@ interface Props {
 
 export default function ProjectAdminPageLayout({ children }: Props) {
   return (
-    <main className="h-screen w-full">
-      <ProjectAdminHeader />
-      <main className="flex h-full w-full">
-        <ProjectAdminPageSideMenu />
-        <div className="h-full min-w-0 flex-1 p-2 pt-18">
-          <div className="bg-secondary h-full w-full overflow-y-scroll rounded-2xl">
-            {children}
+    <AdminGuard>
+      <main className="h-screen w-full">
+        <ProjectAdminHeader />
+        <main className="flex h-full w-full">
+          <ProjectAdminPageSideMenu />
+          <div className="h-full min-w-0 flex-1 p-2 pt-18">
+            <div className="bg-secondary h-full w-full overflow-y-scroll rounded-2xl">
+              {children}
+            </div>
           </div>
-        </div>
+        </main>
       </main>
-    </main>
+    </AdminGuard>
   );
 }

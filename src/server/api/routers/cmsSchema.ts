@@ -16,10 +16,6 @@ import {
 } from "~/zodSchema/cmsSchema";
 
 export const cmsSchemaRouter = createTRPCRouter({
-  /**
-   * Create a new schema inside a project.
-   * Only owner and admin can create schemas (project:update permission).
-   */
   create: protectedProcedure
     .input(CreateCmsSchemaSchema)
     .mutation(async ({ ctx, input }) => {
@@ -28,7 +24,7 @@ export const cmsSchemaRouter = createTRPCRouter({
         input.orgId,
         input.projectId,
         ctx.session.user.id,
-        "project:update",
+        "schema:manage",
       );
       if (!guard.ok) return guard.response;
 
@@ -71,22 +67,6 @@ export const cmsSchemaRouter = createTRPCRouter({
       );
     }),
 
-  /**
-   * Bulk create multiple schemas in a single transaction.
-   *
-   * Validation order:
-   *   1. ABAC — caller must be owner or admin (project:update)
-   *   2. Intra-batch uniqueness — no two items in the request share a slug
-   *   3. DB uniqueness — none of the slugs already exist in this project
-   *
-   * Returns a summary with created count, failed items with reasons,
-   * and the successfully inserted schema rows.
-   *
-   * Uses a transaction so partial failures don't leave the DB in a bad state.
-   * If any item fails the pre-flight checks the whole batch is rejected before
-   * touching the DB. Individual DB-level errors are caught per-item inside the
-   * transaction and collected rather than aborting the whole batch.
-   */
   bulkCreate: protectedProcedure
     .input(BulkCreateCmsSchemaSchema)
     .mutation(async ({ ctx, input }) => {
@@ -98,7 +78,7 @@ export const cmsSchemaRouter = createTRPCRouter({
         orgId,
         projectId,
         ctx.session.user.id,
-        "project:update",
+        "schema:manage",
       );
       if (!guard.ok) return guard.response;
 
@@ -190,10 +170,6 @@ export const cmsSchemaRouter = createTRPCRouter({
       );
     }),
 
-  /**
-   * List all schemas for a project.
-   * owner / admin / manager (if assigned) can read.
-   */
   getAll: protectedProcedure
     .input(GetCmsSchemasSchema)
     .query(async ({ ctx, input }) => {
@@ -280,10 +256,6 @@ export const cmsSchemaRouter = createTRPCRouter({
       );
     }),
 
-  /**
-   * Fetch a single schema by slug.
-   * Returns the full schemaStructure — used by the schema builder page.
-   */
   getBySlug: protectedProcedure
     .input(GetCmsSchemaBySlugSchema)
     .query(async ({ ctx, input }) => {
@@ -322,7 +294,7 @@ export const cmsSchemaRouter = createTRPCRouter({
         input.orgId,
         input.projectId,
         ctx.session.user.id,
-        "project:update",
+        "schema:manage",
       );
       if (!guard.ok) return guard.response;
 
@@ -360,10 +332,7 @@ export const cmsSchemaRouter = createTRPCRouter({
 
       return successResponse(updated!, "Schema updated successfully.");
     }),
-  /**
-   * Reset (empty) a schema's structure back to null.
-   * Only owner and admin (project:update).
-   */
+
   resetStructure: protectedProcedure
     .input(ResetSchemaStructureSchema)
     .mutation(async ({ ctx, input }) => {
@@ -372,7 +341,7 @@ export const cmsSchemaRouter = createTRPCRouter({
         input.orgId,
         input.projectId,
         ctx.session.user.id,
-        "project:update",
+        "schema:manage",
       );
       if (!guard.ok) return guard.response;
 
@@ -403,10 +372,6 @@ export const cmsSchemaRouter = createTRPCRouter({
       );
     }),
 
-  /**
-   * Delete a schema.
-   * Only owner and admin (project:delete).
-   */
   delete: protectedProcedure
     .input(DeleteCmsSchemaSchema)
     .mutation(async ({ ctx, input }) => {
@@ -415,7 +380,7 @@ export const cmsSchemaRouter = createTRPCRouter({
         input.orgId,
         input.projectId,
         ctx.session.user.id,
-        "project:delete",
+        "schema:manage",
       );
       if (!guard.ok) return guard.response;
 
@@ -450,7 +415,7 @@ export const cmsSchemaRouter = createTRPCRouter({
         input.orgId,
         input.projectId,
         ctx.session.user.id,
-        "project:update",
+        "schema:manage",
       );
       if (!guard.ok) return guard.response;
 

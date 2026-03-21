@@ -28,7 +28,8 @@ export type Action =
   | "member:invite"
   | "member:update_role"
   | "member:remove"
-  | "member:view";
+  | "member:view"
+  | "schema:manage";
 
 /** Attributes of the acting subject (sourced from org_member record). */
 export interface SubjectAttributes {
@@ -67,6 +68,7 @@ const POLICY: Record<OrgRole, Record<Action, boolean | "scoped">> = {
     "member:update_role": true,
     "member:remove": true,
     "member:view": true,
+    "schema:manage": true,
   },
   admin: {
     "org:read": true,
@@ -80,6 +82,7 @@ const POLICY: Record<OrgRole, Record<Action, boolean | "scoped">> = {
     "member:update_role": true,
     "member:remove": true,
     "member:view": true,
+    "schema:manage": true,
   },
   manager: {
     "org:read": true,
@@ -93,6 +96,7 @@ const POLICY: Record<OrgRole, Record<Action, boolean | "scoped">> = {
     "member:update_role": false,
     "member:remove": false,
     "member:view": false,
+    "schema:manage": false,
   },
 };
 

@@ -50,18 +50,14 @@ export const ResourceHandler: React.FC<Props> = ({ state }) => {
         />
         <h2 className="mt-2 text-xl font-medium">Access Denied</h2>
         <p className="text-muted-foreground mt-1 max-w-lg">
-          Only owners and admins can manage team members. If you think it&apos;s
-          a bug, please submit a{" "}
-          <Link href="/" className="text-primary underline underline-offset-2">
-            bug report
-          </Link>
-          .
+          You don&apos;t have permission to access this area. Contact your
+          organization owner or admin if you think this is a mistake.
         </p>
         <Button
-          render={<Link href="/">Back to Home</Link>}
+          render={<Link href="/dashboard">Back to Dashboard</Link>}
           nativeButton={false}
           className="mt-5"
-        ></Button>
+        />
       </div>
     );
   }
