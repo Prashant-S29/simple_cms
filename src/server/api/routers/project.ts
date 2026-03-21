@@ -2,7 +2,7 @@ import { and, count, desc, eq, ilike, inArray } from "drizzle-orm";
 import { z } from "zod";
 
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
-import { project } from "~/server/db/project";
+import { project, projectLanguage } from "~/server/db/project";
 import { slugify } from "~/lib/utils";
 import {
   CreateProjectSchema,
@@ -22,6 +22,8 @@ export const projectRouter = createTRPCRouter({
    * Create a project inside an org.
    * Allowed for: owner, admin.
    * Managers cannot create projects.
+   *
+   * Seeds "en" as the default language automatically.
    */
   create: protectedProcedure
     .input(CreateProjectSchema)
@@ -50,18 +52,32 @@ export const projectRouter = createTRPCRouter({
         );
       }
 
-      const [newProject] = await ctx.db
-        .insert(project)
-        .values({
-          name: input.name,
-          slug,
-          description: input.description,
-          orgId: input.orgId,
-          createdById: ctx.session.user.id,
-        })
-        .returning();
+      // Create project + seed default language in a transaction
+      const newProject = await ctx.db.transaction(async (tx) => {
+        const [created] = await tx
+          .insert(project)
+          .values({
+            name: input.name,
+            slug,
+            description: input.description,
+            orgId: input.orgId,
+            createdById: ctx.session.user.id,
+          })
+          .returning();
 
-      return successResponse(newProject!, `"${input.name}" has been created.`);
+        // Always seed English as the default language
+        await tx.insert(projectLanguage).values({
+          projectId: created!.id,
+          locale: "en",
+          label: "English",
+          isDefault: true,
+          status: "active",
+        });
+
+        return created!;
+      });
+
+      return successResponse(newProject, `"${input.name}" has been created.`);
     }),
 
   /**
@@ -219,11 +235,6 @@ export const projectRouter = createTRPCRouter({
       );
     }),
 
-  /**
-   * Update a project.
-   * owner / admin → can update any project.
-   * manager       → can only update their assigned projects.
-   */
   update: protectedProcedure
     .input(UpdateProjectSchema)
     .mutation(async ({ ctx, input }) => {
@@ -266,11 +277,6 @@ export const projectRouter = createTRPCRouter({
       return successResponse(updated, `"${updated.name}" has been updated.`);
     }),
 
-  /**
-   * Delete a project.
-   * owner / admin → can delete any project.
-   * manager       → can only delete their assigned projects.
-   */
   delete: protectedProcedure
     .input(z.object({ id: z.string().uuid(), orgId: z.string().uuid() }))
     .mutation(async ({ ctx, input }) => {

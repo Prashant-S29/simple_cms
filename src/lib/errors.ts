@@ -52,6 +52,10 @@ export const ERRORS = {
       message:
         "The request could not be understood or was missing required parameters.",
     },
+    DUPLICATE_RECORD: {
+      code: "DUPLICATE_RECORD",
+      message: "A record with this identifier already exists.",
+    },
   },
 
   org: {
