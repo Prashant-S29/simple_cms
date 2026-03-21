@@ -37,7 +37,6 @@ function initField(field: FieldDefinition): unknown {
       return initFields(field.fields ?? {});
 
     case "array":
-      // Arrays start empty — manager adds items manually
       return [];
   }
 }

@@ -24,7 +24,6 @@ export const FILE_EXTENSION_MAP: Record<
   string,
   { fileType: string; formats: string[] }
 > = {
-  // Images
   webp: { fileType: "image", formats: ["webp"] },
   jpg: { fileType: "image", formats: ["jpg"] },
   jpeg: { fileType: "image", formats: ["jpeg"] },
@@ -32,21 +31,17 @@ export const FILE_EXTENSION_MAP: Record<
   gif: { fileType: "image", formats: ["gif"] },
   svg: { fileType: "image", formats: ["svg"] },
   avif: { fileType: "image", formats: ["avif"] },
-  // Video
   mp4: { fileType: "video", formats: ["mp4"] },
   webm: { fileType: "video", formats: ["webm"] },
   mov: { fileType: "video", formats: ["mov"] },
   avi: { fileType: "video", formats: ["avi"] },
   mkv: { fileType: "video", formats: ["mkv"] },
-  // PDF
   pdf: { fileType: "pdf", formats: ["pdf"] },
-  // Audio
   mp3: { fileType: "audio", formats: ["mp3"] },
   wav: { fileType: "audio", formats: ["wav"] },
   ogg: { fileType: "audio", formats: ["ogg"] },
   aac: { fileType: "audio", formats: ["aac"] },
   flac: { fileType: "audio", formats: ["flac"] },
-  // Documents
   doc: { fileType: "document", formats: ["doc"] },
   docx: { fileType: "document", formats: ["docx"] },
   xls: { fileType: "document", formats: ["xls"] },

@@ -15,8 +15,6 @@ import { jsonToSchemaStructure } from "~/lib/cms/jsonParser";
 import type { SchemaStructure } from "~/zodSchema/cmsSchema";
 import { cn } from "~/lib/utils";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-
 export interface ParsedSchemaFile {
   /** Original filename without extension — used as default schema title */
   fileName: string;
@@ -33,8 +31,6 @@ interface Props {
 }
 
 type FileStatus = "idle" | "parsing" | "done";
-
-// ─── Component ────────────────────────────────────────────────────────────────
 
 export const BulkSchemaUploader: React.FC<Props> = ({ onFilesParsed }) => {
   const inputRef = useRef<HTMLInputElement>(null);

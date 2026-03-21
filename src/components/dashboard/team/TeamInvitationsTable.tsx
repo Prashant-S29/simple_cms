@@ -45,8 +45,6 @@ import {
 } from "~/components/ui/dialog";
 import { useDebounce } from "~/hooks";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-
 interface InvitationRow {
   id: string;
   email: string;
@@ -64,8 +62,6 @@ interface InvitationRow {
 interface Props {
   orgId: string;
 }
-
-// ─── Status Badge ─────────────────────────────────────────────────────────────
 
 const STATUS_CONFIG = {
   pending: {
@@ -98,8 +94,6 @@ const InvitationStatusBadge: React.FC<{
     </span>
   );
 };
-
-// ─── Action Dialog ────────────────────────────────────────────────────────────
 
 const InvitationActionDialog: React.FC<{
   open: boolean;
@@ -264,8 +258,6 @@ const InvitationActionDialog: React.FC<{
     </Dialog>
   );
 };
-
-// ─── Main Table ───────────────────────────────────────────────────────────────
 
 export const TeamInvitationsTable: React.FC<Props> = ({ orgId }) => {
   const [page, setPage] = useState(1);

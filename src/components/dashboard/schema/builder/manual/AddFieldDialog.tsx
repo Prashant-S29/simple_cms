@@ -15,8 +15,6 @@ import {
 import { FileVariantConfig } from "./FileVariantConfig";
 import type { FieldDefinition, FileVariant } from "~/zodSchema/cmsSchema";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-
 export type FieldFormState =
   | { type: "string"; key: string; label: string }
   | { type: "text"; key: string; label: string }
@@ -69,8 +67,6 @@ const ARRAY_ITEM_TYPES: {
   { value: "object", label: "Object" },
 ];
 
-// ─── Component ────────────────────────────────────────────────────────────────
-
 export const AddFieldDialog: React.FC<Props> = ({
   open,
   onOpenChange,
@@ -100,7 +96,6 @@ export const AddFieldDialog: React.FC<Props> = ({
   const [labelError, setLabelError] = useState<string | null>(null);
   const [variantError, setVariantError] = useState<string | null>(null);
 
-  // Populate form when editing
   useEffect(() => {
     if (!open) return;
 
@@ -117,7 +112,6 @@ export const AddFieldDialog: React.FC<Props> = ({
         setArrayItemType(existing.field.itemType);
       }
     } else {
-      // Reset for new field
       setKey("");
       setLabel("");
       setType("string");
@@ -138,7 +132,6 @@ export const AddFieldDialog: React.FC<Props> = ({
     setVariantError(null);
   }, [open, existing]);
 
-  // Auto-fill label from key when label is empty
   const handleKeyChange = (val: string) => {
     const sanitized = val
       .toLowerCase()
@@ -201,7 +194,6 @@ export const AddFieldDialog: React.FC<Props> = ({
         field = { type: "file", label, multiple, variants };
         break;
       case "object":
-        // Fields will be added separately once the object node exists
         field = {
           type: "object",
           label,
@@ -216,7 +208,6 @@ export const AddFieldDialog: React.FC<Props> = ({
           type: "array",
           label,
           itemType: arrayItemType,
-          // Preserve existing sub-fields if editing object array
           fields:
             arrayItemType === "object" &&
             existing?.field.type === "array" &&

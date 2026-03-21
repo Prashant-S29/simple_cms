@@ -54,7 +54,6 @@ export const SchemaSelector: React.FC = () => {
   const [createOpen, setCreateOpen] = useState(false);
   const debouncedSearch = useDebounce(search, 400);
 
-  // Need projectId for the create form — fetch from slug
   const { data: projectResponse } = api.project.getBySlug.useQuery(
     { slug: projectSlug, orgId },
     { enabled: !!projectSlug && !!orgId },
@@ -91,7 +90,6 @@ export const SchemaSelector: React.FC = () => {
     setOpen(false);
   };
 
-  // On successful schema creation — navigate straight to the new schema page
   const handleCreateSuccess = (newSlug: string) => {
     setCreateOpen(false);
     setOpen(false);

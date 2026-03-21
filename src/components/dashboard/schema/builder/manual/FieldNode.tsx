@@ -19,8 +19,6 @@ import { AddFieldDialog } from "./AddFieldDialog";
 import type { FieldDefinition } from "~/zodSchema/cmsSchema";
 import { cn } from "~/lib/utils";
 
-// ─── Field type meta ──────────────────────────────────────────────────────────
-
 const FIELD_META: Record<
   string,
   { icon: IconSvgElement; color: string; label: string }
@@ -35,8 +33,6 @@ const FIELD_META: Record<
   },
   array: { icon: ListViewIcon, color: "text-pink-500", label: "Array" },
 };
-
-// ─── Props ────────────────────────────────────────────────────────────────────
 
 interface Props {
   fieldKey: string;
@@ -56,8 +52,6 @@ interface Props {
   onChildDelete: (parentKey: string, childKey: string) => void;
   readOnly: boolean;
 }
-
-// ─── Component ────────────────────────────────────────────────────────────────
 
 export const FieldNode: React.FC<Props> = ({
   fieldKey,
@@ -94,18 +88,15 @@ export const FieldNode: React.FC<Props> = ({
 
   const usedChildKeys = Object.keys(childFields ?? {});
 
-  // ── Edit handler ───────────────────────────────────────────────────────────
   const handleEdit = (key: string, updated: FieldDefinition) => {
     onUpdate(key, updated);
   };
 
-  // ── Add child ──────────────────────────────────────────────────────────────
   const handleAddChild = (childKey: string, childField: FieldDefinition) => {
     onChildChange(fieldKey, childKey, childField);
     setExpanded(true);
   };
 
-  // ── Child update (nested) ──────────────────────────────────────────────────
   const handleChildUpdate = (childKey: string, childField: FieldDefinition) => {
     onChildChange(fieldKey, childKey, childField);
   };

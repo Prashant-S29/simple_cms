@@ -31,8 +31,6 @@ export const SchemaPreviewTree: React.FC<SchemaPreviewTreeProps> = ({
   );
 };
 
-// ─── Field type metadata ──────────────────────────────────────────────────────
-
 const FIELD_TYPE_META: Record<
   string,
   { label: string; icon: IconSvgElement; color: string }
@@ -47,8 +45,6 @@ const FIELD_TYPE_META: Record<
   },
   array: { label: "Array", icon: ListViewIcon, color: "text-pink-500" },
 };
-
-// ─── Single field node ────────────────────────────────────────────────────────
 
 interface FieldNodePreviewProps {
   fieldKey: string;
@@ -146,8 +142,6 @@ const FieldNodePreview: React.FC<FieldNodePreviewProps> = ({
     </div>
   );
 };
-
-// ─── File badge — shows variant summary ──────────────────────────────────────
 
 const FileBadge: React.FC<{
   field: Extract<FieldDefinition, { type: "file" }>;

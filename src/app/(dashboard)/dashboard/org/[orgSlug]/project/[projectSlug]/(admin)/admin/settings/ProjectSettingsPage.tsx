@@ -4,7 +4,10 @@ import React from "react";
 import { api } from "~/trpc/react";
 import { ResourceHandler } from "~/components/common";
 import { Skeleton } from "~/components/ui/skeleton";
-import { ProjectLanguageSettings } from "~/components/dashboard/project/settings/ProjectLanguageSettings";
+import {
+  ProjectLanguageSettings,
+  ProjectExportSettings,
+} from "~/components/dashboard/project/settings";
 
 interface Props {
   projectSlug: string;
@@ -25,6 +28,7 @@ const ProjectSettingsPage: React.FC<Props> = ({ projectSlug, orgId }) => {
           <Skeleton className="h-7 w-40" />
           <Skeleton className="h-5 w-64" />
           <Skeleton className="h-48 w-full" />
+          <Skeleton className="h-48 w-full" />
         </div>
       </div>
     );
@@ -38,12 +42,17 @@ const ProjectSettingsPage: React.FC<Props> = ({ projectSlug, orgId }) => {
 
   return (
     <div>
-      <div className="sticky top-0 z-20 w-full border-b px-4 py-3">
+      <div className="bg-muted sticky top-0 z-20 w-full border-b px-4 py-3">
         <h1 className="font-medium capitalize">Settings</h1>
       </div>
 
       <div className="flex flex-col gap-6 p-3">
         <ProjectLanguageSettings projectId={project.id} orgId={orgId} />
+        <ProjectExportSettings
+          projectId={project.id}
+          projectSlug={project.slug}
+          orgId={orgId}
+        />
       </div>
     </div>
   );

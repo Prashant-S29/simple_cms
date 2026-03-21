@@ -20,8 +20,6 @@ import { slugify } from "~/lib/utils";
 import { useDebounce } from "~/hooks";
 import type { SchemaCardSchema } from "./SchemaCard";
 
-// ─── Edit (title + description) ──────────────────────────────────────────────
-
 export interface EditDialogProps {
   open: boolean;
   onOpenChange: (v: boolean) => void;
@@ -88,7 +86,6 @@ export const EditDialog: React.FC<EditDialogProps> = ({
       toast.success("Schema updated successfully.");
       void utils.cmsSchema.getAll.invalidate();
       onOpenChange(false);
-      // Navigate if slug changed
       if (res.data!.slug !== schema.slug) {
         router.push(
           `/dashboard/org/${orgSlug}/project/${projectSlug}/admin/schema/${res.data!.slug}?orgId=${orgId}`,
@@ -228,8 +225,6 @@ export const EditDialog: React.FC<EditDialogProps> = ({
   );
 };
 
-// ─── Delete ───────────────────────────────────────────────────────────────────
-
 export interface DeleteDialogProps {
   open: boolean;
   onOpenChange: (v: boolean) => void;
@@ -317,8 +312,6 @@ export const DeleteDialog: React.FC<DeleteDialogProps> = ({
     </Dialog>
   );
 };
-
-// ─── Reset ────────────────────────────────────────────────────────────────────
 
 export interface ResetDialogProps {
   open: boolean;

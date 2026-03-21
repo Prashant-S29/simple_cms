@@ -14,8 +14,6 @@ import {
 import type { FieldDefinition, SchemaStructure } from "~/zodSchema/cmsSchema";
 import { cn } from "~/lib/utils";
 
-// ─── Top-level form ───────────────────────────────────────────────────────────
-
 interface ContentFormProps {
   structure: SchemaStructure;
   data: Record<string, unknown>;
@@ -47,8 +45,6 @@ export const ContentForm: React.FC<ContentFormProps> = ({
   );
 };
 
-// ─── Single field renderer ────────────────────────────────────────────────────
-
 interface FieldRendererProps {
   fieldKey: string;
   field: FieldDefinition;
@@ -66,7 +62,6 @@ const FieldRenderer: React.FC<FieldRendererProps> = ({
   depth,
   onRemove,
 }) => {
-  // Reusable label row with optional remove button — used by string, text
   const labelRow = (
     <div className="flex items-center justify-between">
       <FieldLabel htmlFor={fieldKey}>{field.label}</FieldLabel>
@@ -152,8 +147,6 @@ const FieldRenderer: React.FC<FieldRendererProps> = ({
   }
 };
 
-// ─── File field ───────────────────────────────────────────────────────────────
-
 interface FileFieldRendererProps {
   fieldKey: string;
   field: Extract<FieldDefinition, { type: "file" }>;
@@ -233,8 +226,6 @@ const FileFieldRenderer: React.FC<FileFieldRendererProps> = ({
   );
 };
 
-// ─── Object field ─────────────────────────────────────────────────────────────
-
 interface ObjectFieldRendererProps {
   fieldKey: string;
   field: Extract<FieldDefinition, { type: "object" }>;
@@ -292,15 +283,12 @@ const ObjectFieldRenderer: React.FC<ObjectFieldRendererProps> = ({
             value={obj[key]}
             onChange={(val) => handleSubChange(key, val)}
             depth={depth + 1}
-            // Sub-fields inside an object are not individually removable
           />
         ))}
       </div>
     </div>
   );
 };
-
-// ─── Array field ──────────────────────────────────────────────────────────────
 
 interface ArrayFieldRendererProps {
   fieldKey: string;

@@ -43,7 +43,6 @@ export const CreateNewSchemaForm: React.FC<Props> = ({
       }
       toast.success(response.message ?? "Schema created successfully!");
       form.reset();
-      // Pass the new slug back so callers can navigate
       onSuccess?.(response.data!.slug);
     },
     onSettled: () => {

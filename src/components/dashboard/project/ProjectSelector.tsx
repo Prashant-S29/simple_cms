@@ -56,8 +56,6 @@ export const ProjectSelector: React.FC = () => {
     { enabled: !!projectSlug && !!orgId },
   );
 
-  // Used to gate the "New Project" button.
-  // project:create = true for owner/admin, false for manager (ABAC policy).
   const { data: membershipResponse } = api.orgMember.myMembership.useQuery(
     { orgId },
     { enabled: !!orgId },

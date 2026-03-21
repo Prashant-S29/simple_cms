@@ -16,7 +16,6 @@ import { api } from "~/trpc/react";
 import { Skeleton } from "~/components/ui/skeleton";
 import { cn } from "~/lib/utils";
 import { Button } from "~/components/ui/button";
-// import { PAGINATION_LIMIT } from "~/lib/constants";
 
 export const ManagerSideMenu: React.FC = () => {
   const params = useParams();
@@ -29,14 +28,12 @@ export const ManagerSideMenu: React.FC = () => {
 
   const [schemasExpanded, setSchemasExpanded] = useState(true);
 
-  // Load project to get projectId
   const { data: projectResponse } = api.project.getBySlug.useQuery(
     { slug: projectSlug, orgId },
     { enabled: !!projectSlug && !!orgId },
   );
   const projectId = projectResponse?.data?.id ?? "";
 
-  // Load all schemas for this project
   const { data: schemasResponse, isLoading: isSchemasLoading } =
     api.cmsSchema.getAll.useQuery(
       { projectId, orgId, page: 1, limit: 50 },

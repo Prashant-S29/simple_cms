@@ -35,8 +35,6 @@ import { TeamMembersTable } from "~/components/dashboard/team/TeamMembersTable";
 import { TeamInvitationsTable } from "~/components/dashboard/team/TeamInvitationsTable";
 import Image from "next/image";
 
-// ─── Settings Page ────────────────────────────────────────────────────────────
-
 interface Props {
   slug: string;
   userId: string;
@@ -174,8 +172,6 @@ export const SettingsPage: React.FC<Props> = ({ slug, userId }) => {
   );
 };
 
-// ─── Team Summary Panel (manager read-only view) ──────────────────────────────
-
 const TeamSummaryPanel: React.FC<{ slug: string }> = ({ slug }) => {
   const { data: response, isLoading } = api.org.getOrgTeamBySlug.useQuery({
     slug,
@@ -239,8 +235,6 @@ const TeamSummaryPanel: React.FC<{ slug: string }> = ({ slug }) => {
     </div>
   );
 };
-
-// ─── Team Manage Panel ────────────────────────────────────────────────────────
 
 interface TeamManagePanelProps {
   orgId: string;
@@ -341,8 +335,6 @@ const TeamManagePanel: React.FC<TeamManagePanelProps> = ({
     </div>
   );
 };
-
-// ─── Inline Org Name Editor ───────────────────────────────────────────────────
 
 interface OrgNameEditorProps {
   orgId: string;
@@ -455,8 +447,6 @@ const OrgNameEditor: React.FC<OrgNameEditorProps> = ({
   );
 };
 
-// ─── Copyable Invite Code ─────────────────────────────────────────────────────
-
 const CopyableInviteCode: React.FC<{ code: string }> = ({ code }) => {
   const handleCopy = async () => {
     try {
@@ -482,8 +472,6 @@ const CopyableInviteCode: React.FC<{ code: string }> = ({ code }) => {
     </div>
   );
 };
-
-// ─── Delete Org Button ────────────────────────────────────────────────────────
 
 interface DeleteOrgButtonProps {
   orgId: string;

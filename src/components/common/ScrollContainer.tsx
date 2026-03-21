@@ -25,7 +25,6 @@ export function ScrollContainer({ children }: { children: React.ReactNode }) {
     updateShadows(); // check on mount
     el.addEventListener("scroll", updateShadows, { passive: true });
 
-    // Also watch for content size changes
     const ro = new ResizeObserver(updateShadows);
     ro.observe(el);
 

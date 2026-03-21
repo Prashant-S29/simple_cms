@@ -5,8 +5,6 @@ import type {
 } from "~/zodSchema/cmsSchema";
 import { FILE_EXTENSION_MAP } from "../constants";
 
-// ─── File detection config ────────────────────────────────────────────────────
-
 /**
  * Key patterns that hint at a file field, mapped to default file type config.
  * Checked case-insensitively against the field key.
@@ -18,25 +16,21 @@ const KEY_PATTERN_MAP: {
   fileType: string;
   formats: string[];
 }[] = [
-  // Video hints
   {
     pattern: /video/i,
     fileType: "video",
     formats: ["mp4", "webm", "mov"],
   },
-  // PDF hints
   {
     pattern: /pdf|document|doc|file/i,
     fileType: "pdf",
     formats: ["pdf"],
   },
-  // Audio hints
   {
     pattern: /audio|sound|music|track/i,
     fileType: "audio",
     formats: ["mp3", "wav", "ogg"],
   },
-  // Image hints — most common, checked last so more specific patterns win
   {
     pattern:
       /image|img|photo|picture|banner|thumbnail|avatar|icon|logo|cover|background|bg|hero|slider|gallery|portrait|landscape/i,
@@ -44,8 +38,6 @@ const KEY_PATTERN_MAP: {
     formats: ["webp", "jpg", "jpeg", "png"],
   },
 ];
-
-// ─── Detection helpers ────────────────────────────────────────────────────────
 
 /**
  * Try to detect file type from the actual string value.
@@ -87,8 +79,6 @@ function makeFileVariant(fileType: string, formats: string[]): FileVariant {
   };
 }
 
-// ─── Field inference ──────────────────────────────────────────────────────────
-
 /**
  * Infers a FieldDefinition from a JSON value + key.
  *
@@ -102,9 +92,7 @@ function inferField(key: string, value: unknown): FieldDefinition {
     return { type: "string", label: labelFromKey(key) };
   }
 
-  // ── null / undefined ──────────────────────────────────────────────────────
   if (value === null || value === undefined) {
-    // Even for null, check key pattern — it might be an optional image
     const keyHint = detectFileFromKey(key);
     if (keyHint) {
       return {
@@ -117,9 +105,7 @@ function inferField(key: string, value: unknown): FieldDefinition {
     return { type: "string", label: labelFromKey(key) };
   }
 
-  // ── String value ──────────────────────────────────────────────────────────
   if (typeof value === "string") {
-    // 1. Check actual value for file extension
     const valueHint = detectFileFromValue(value);
     if (valueHint) {
       return {
@@ -130,7 +116,6 @@ function inferField(key: string, value: unknown): FieldDefinition {
       };
     }
 
-    // 2. Check key pattern
     const keyHint = detectFileFromKey(key);
     if (keyHint) {
       return {
@@ -141,22 +126,18 @@ function inferField(key: string, value: unknown): FieldDefinition {
       };
     }
 
-    // 3. Plain text
     return {
       type: value.length > 80 ? "text" : "string",
       label: labelFromKey(key),
     };
   }
 
-  // ── Number or boolean ─────────────────────────────────────────────────────
   if (typeof value === "number" || typeof value === "boolean") {
     return { type: "string", label: labelFromKey(key) };
   }
 
-  // ── Array ─────────────────────────────────────────────────────────────────
   if (Array.isArray(value)) {
     if (value.length === 0) {
-      // Empty array — check key for file hint
       const keyHint = detectFileFromKey(key);
       if (keyHint) {
         return {
@@ -171,7 +152,6 @@ function inferField(key: string, value: unknown): FieldDefinition {
 
     const firstItem = value[0];
 
-    // Array of objects → recurse first item
     if (
       typeof firstItem === "object" &&
       firstItem !== null &&
@@ -185,11 +165,9 @@ function inferField(key: string, value: unknown): FieldDefinition {
       };
     }
 
-    // Array of strings — check if they look like file paths
     if (typeof firstItem === "string") {
       const valueHint = detectFileFromValue(firstItem);
       if (valueHint) {
-        // Multiple file upload
         return {
           type: "file",
           label: labelFromKey(key),
@@ -198,7 +176,6 @@ function inferField(key: string, value: unknown): FieldDefinition {
         };
       }
 
-      // Check key pattern
       const keyHint = detectFileFromKey(key);
       if (keyHint) {
         return {
@@ -216,11 +193,9 @@ function inferField(key: string, value: unknown): FieldDefinition {
       };
     }
 
-    // Fallback
     return { type: "array", label: labelFromKey(key), itemType: "string" };
   }
 
-  // ── Plain object ──────────────────────────────────────────────────────────
   if (typeof value === "object") {
     return {
       type: "object",
@@ -229,7 +204,6 @@ function inferField(key: string, value: unknown): FieldDefinition {
     };
   }
 
-  // ── Final fallback ────────────────────────────────────────────────────────
   return { type: "string", label: labelFromKey(key) };
 }
 

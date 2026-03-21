@@ -39,8 +39,6 @@ function templateField(key: string, field: FieldDefinition): unknown {
   }
 }
 
-// ─── Validator ────────────────────────────────────────────────────────────────
-
 export type ValidationResult = { ok: true } | { ok: false; errors: string[] };
 
 /**
@@ -76,7 +74,6 @@ function validateFields(
     const fieldPath = path ? `${path}.${key}` : key;
     const value = record[key];
 
-    // Missing key is fine — treated as empty
     if (value === undefined || value === null) continue;
 
     validateField(value, field, fieldPath, errors);

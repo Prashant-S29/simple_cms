@@ -1,5 +1,4 @@
 import { headers } from "next/headers";
-// import { redirect } from "next/navigation";
 import { checkAuthServer } from "~/lib/auth";
 import { ResourceHandler } from "~/components/common";
 
@@ -24,8 +23,6 @@ const ProjectManagerPage: React.FC<Props> = async ({
 
   if (!session) return <ResourceHandler state="loading" />;
 
-  // The sidebar loads schemas — this page just shows a welcome state.
-  // Navigation to a specific schema happens via the sidebar.
   return (
     <div className="flex h-full flex-col items-center justify-center gap-3 text-center">
       <p className="text-muted-foreground text-sm">

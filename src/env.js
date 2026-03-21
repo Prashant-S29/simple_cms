@@ -16,9 +16,7 @@ export const env = createEnv({
     RESEND_API_KEY: z.string(),
   },
 
-  client: {
-    // NEXT_PUBLIC_CLIENTVAR: z.string(),
-  },
+  client: {},
 
   runtimeEnv: {
     BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET,

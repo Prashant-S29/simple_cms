@@ -40,7 +40,6 @@ export const BulkSchemaReview: React.FC<Props> = ({
 
   const utils = api.useUtils();
 
-  // ── Fetch existing schemas for conflict detection ─────────────────────────
   const { data: existingSchemasResponse } = api.cmsSchema.getAll.useQuery(
     { projectId, orgId, page: 1, limit: 100 },
     { enabled: !!projectId && !!orgId },
@@ -50,7 +49,6 @@ export const BulkSchemaReview: React.FC<Props> = ({
     (existingSchemasResponse?.data?.items ?? []).map((s) => s.slug),
   );
 
-  // ── Initialise items from parsed files + check intra-batch duplicates ─────
   useEffect(() => {
     const initialItems: BulkSchemaItem[] = files.map((f) => ({
       title: f.fileName,
@@ -81,8 +79,6 @@ export const BulkSchemaReview: React.FC<Props> = ({
     );
   }, [files]);
 
-  // ── Mark items conflicting with existing project schemas ──────────────────
-  // Runs once when existing schemas load, then again if items change length
   useEffect(() => {
     if (!existingSchemasResponse?.data) return;
 
@@ -100,8 +96,6 @@ export const BulkSchemaReview: React.FC<Props> = ({
           };
         }
 
-        // Clear a stale existing-schema error if the slug no longer conflicts
-        // (e.g. user renamed the title)
         if (isCurrentlyExistingError) {
           return { ...item, titleError: null };
         }
@@ -112,7 +106,6 @@ export const BulkSchemaReview: React.FC<Props> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [existingSchemasResponse?.data, items.length]);
 
-  // ── Mutation ──────────────────────────────────────────────────────────────
   const { mutate: bulkCreate, isPending: isSubmitting } =
     api.cmsSchema.bulkCreate.useMutation({
       onError: () => toast.error("Bulk creation failed. Please try again."),
@@ -120,11 +113,8 @@ export const BulkSchemaReview: React.FC<Props> = ({
         if (res.error) {
           toast.error(res.error.message);
 
-          // Feed existing-schema server errors back into item-level state
           const message = res.error.message ?? "";
           if (message.includes("already exist")) {
-            // Server error format:
-            // "The following schemas already exist in this project: "Title1", "Title2"."
             const matches = message.match(/"([^"]+)"/g);
             const conflictingTitles = new Set(
               (matches ?? []).map((m) => m.replace(/"/g, "").toLowerCase()),
@@ -145,7 +135,6 @@ export const BulkSchemaReview: React.FC<Props> = ({
               }),
             );
 
-            // Navigate to the first conflicting tab
             if (firstConflictIndex !== -1) {
               setActiveTab(firstConflictIndex);
             }
@@ -158,12 +147,10 @@ export const BulkSchemaReview: React.FC<Props> = ({
       },
     });
 
-  // ── Item change ───────────────────────────────────────────────────────────
   const handleItemChange = (index: number, updated: BulkSchemaItem) => {
     setItems((prev) => prev.map((item, i) => (i === index ? updated : item)));
   };
 
-  // ── Delete item + revalidate remaining ────────────────────────────────────
   const handleDeleteItem = (index: number) => {
     setItems((prev) => {
       const next = prev.filter((_, i) => i !== index);
@@ -199,7 +186,6 @@ export const BulkSchemaReview: React.FC<Props> = ({
     });
   };
 
-  // ── Submit ────────────────────────────────────────────────────────────────
   const handleSubmit = () => {
     const validItems = items.filter(
       (item) => item.structure !== null && !item.titleError,
@@ -229,7 +215,6 @@ export const BulkSchemaReview: React.FC<Props> = ({
     });
   };
 
-  // ── Derived state ─────────────────────────────────────────────────────────
   const validCount = items.filter(
     (item) => item.structure !== null && !item.titleError,
   ).length;

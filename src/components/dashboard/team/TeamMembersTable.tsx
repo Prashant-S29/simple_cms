@@ -52,8 +52,6 @@ import { Checkbox } from "~/components/ui/checkbox";
 import { useDebounce } from "~/hooks";
 import Image from "next/image";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-
 interface MemberRow {
   id: string;
   userId: string;
@@ -110,8 +108,6 @@ const Avatar: React.FC<{
   );
 };
 
-// ─── Role Dropdown Cell ───────────────────────────────────────────────────────
-
 const RoleCell: React.FC<{
   member: MemberRow;
   orgId: string;
@@ -143,7 +139,6 @@ const RoleCell: React.FC<{
       onError: () => toast.error("Failed to update role."),
     });
 
-  // ── Fix: guard null from Base UI Select ───────────────────────────────────
   const handleRoleSelect = (value: string | null) => {
     if (!value) return;
     const newRole = value as "admin" | "manager";
@@ -242,8 +237,6 @@ const RoleCell: React.FC<{
   );
 };
 
-// ─── Projects Cell ────────────────────────────────────────────────────────────
-
 const ProjectsCell: React.FC<{ member: MemberRow }> = ({ member }) => {
   if (member.role !== "manager")
     return <span className="text-muted-foreground text-sm">All</span>;
@@ -264,8 +257,6 @@ const ProjectsCell: React.FC<{ member: MemberRow }> = ({ member }) => {
     </div>
   );
 };
-
-// ─── Action Dialog ────────────────────────────────────────────────────────────
 
 const ActionDialog: React.FC<{
   open: boolean;
@@ -452,8 +443,6 @@ const ActionDialog: React.FC<{
   );
 };
 
-// ─── Main Table ───────────────────────────────────────────────────────────────
-
 export const TeamMembersTable: React.FC<Props> = ({
   orgId,
   myRole,
@@ -475,15 +464,12 @@ export const TeamMembersTable: React.FC<Props> = ({
 
   const members: MemberRow[] = useMemo(() => {
     if (!response || response.error) return [];
-    // active members only
     return response.data.items.filter((m) => m.status === "active");
   }, [response]);
 
   const total = !response || response.error ? 0 : response.data.total;
   const totalPages = Math.max(1, Math.ceil(total / limit));
 
-  // ── Fix: don't annotate the array as ColumnDef<Row,unknown>[].
-  // Instead type the columnHelper generically and cast each accessor. ─────────
   const columnHelper = createColumnHelper<MemberRow>();
 
   const columns = useMemo(

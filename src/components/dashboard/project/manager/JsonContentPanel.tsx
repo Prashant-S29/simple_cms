@@ -16,43 +16,39 @@ import {
   validateContentAgainstSchema,
   type ValidationResult,
 } from "~/lib/cms/contentTemplate";
+import { TypesPanel } from "./TypesPanel";
 import type { SchemaStructure } from "~/zodSchema/cmsSchema";
 
 interface Props {
   structure: SchemaStructure;
-  /** Current form data — kept in sync with the form UI */
+  schemaSlug: string;
   data: Record<string, unknown>;
-  /** Called when manager edits the JSON directly */
   onChange: (updated: Record<string, unknown>) => void;
 }
 
 export const JsonContentPanel: React.FC<Props> = ({
   structure,
+  schemaSlug,
   data,
   onChange,
 }) => {
   const template = generateContentTemplate(structure);
   const templateStr = JSON.stringify(template, null, 2);
 
-  // ── Local raw JSON string — tracks what's in the textarea ─────────────────
-  // We keep a separate string state rather than always serializing `data`
-  // to avoid fighting the cursor position when the user types.
   const [raw, setRaw] = useState(() => JSON.stringify(data, null, 2));
   const [validation, setValidation] = useState<ValidationResult | null>(null);
   const [templateExpanded, setTemplateExpanded] = useState(false);
+  const [jsonExpanded, setJsonExpanded] = useState(true);
+
   const [copied, setCopied] = useState(false);
 
-  // When `data` changes from the FORM side (not JSON side), update textarea
-  // Use a ref to track whether the last change came from us or the form
   const lastJsonRef = useRef<string>(JSON.stringify(data, null, 2));
 
   useEffect(() => {
     const incoming = JSON.stringify(data, null, 2);
-    // Only update raw if the form changed something we didn't originate
     if (incoming !== lastJsonRef.current) {
       setRaw(incoming);
       lastJsonRef.current = incoming;
-      // Re-validate with new data
       setValidation({ ok: true });
     }
   }, [data]);
@@ -76,7 +72,6 @@ export const JsonContentPanel: React.FC<Props> = ({
           errors: ["Invalid JSON — check for syntax errors."],
         });
       } else {
-        // Mid-typing — stay neutral
         setValidation(null);
       }
       return;
@@ -86,7 +81,6 @@ export const JsonContentPanel: React.FC<Props> = ({
     setValidation(result);
 
     if (result.ok) {
-      // Push to parent immediately — form updates in real time
       lastJsonRef.current = value;
       onChange(parsed as Record<string, unknown>);
     }
@@ -100,14 +94,26 @@ export const JsonContentPanel: React.FC<Props> = ({
 
   const isValid = validation?.ok === true;
   const hasErrors = validation?.ok === false;
+  const errors = hasErrors
+    ? (validation as { ok: false; errors: string[] }).errors
+    : [];
 
   return (
     <div className="flex flex-col gap-3">
       {/* ── JSON textarea ─────────────────────────────────────────────────── */}
       <div className="bg-card rounded-xl border">
-        <div className="flex items-center justify-between border-b px-4 py-2.5">
-          <span className="text-sm font-medium">JSON Editor</span>
-          {/* Validation status */}
+        <div
+          className="flex cursor-pointer items-center justify-between px-4 py-2.5"
+          onClick={() => setJsonExpanded((v) => !v)}
+        >
+          <div className="flex items-center gap-2">
+            <HugeiconsIcon
+              icon={jsonExpanded ? ArrowDown01Icon : ArrowRight01Icon}
+              size={13}
+              className="text-muted-foreground"
+            />
+            <span className="text-sm font-medium">JSON Editor</span>
+          </div>
           {validation && (
             <div className="flex items-center gap-1.5">
               {isValid ? (
@@ -127,15 +133,7 @@ export const JsonContentPanel: React.FC<Props> = ({
                     className="text-destructive"
                   />
                   <span className="text-destructive text-xs">
-                    {
-                      (validation as { ok: false; errors: string[] }).errors
-                        .length
-                    }{" "}
-                    error
-                    {(validation as { ok: false; errors: string[] }).errors
-                      .length === 1
-                      ? ""
-                      : "s"}
+                    {errors.length} error{errors.length === 1 ? "" : "s"}
                   </span>
                 </>
               )}
@@ -143,85 +141,80 @@ export const JsonContentPanel: React.FC<Props> = ({
           )}
         </div>
 
-        <div className="p-3">
-          <Textarea
-            value={raw}
-            onChange={(e) => handleRawChange(e.target.value)}
-            rows={20}
-            className="font-mono text-xs"
-            aria-invalid={hasErrors}
-            spellCheck={false}
-          />
-        </div>
+        {jsonExpanded && (
+          <>
+            <div className="border-t p-3">
+              <Textarea
+                value={raw}
+                onChange={(e) => handleRawChange(e.target.value)}
+                rows={20}
+                className="font-mono text-xs"
+                aria-invalid={hasErrors}
+                spellCheck={false}
+              />
+            </div>
 
-        {/* Validation errors */}
-        {hasErrors && validation && (
-          <div className="border-t px-4 pb-4">
-            <ul className="flex flex-col gap-1 pt-3">
-              {(validation as { ok: false; errors: string[] }).errors
-                .slice(0, 5)
-                .map((err, i) => (
-                  <li key={i} className="text-destructive font-mono text-xs">
-                    {err}
-                  </li>
-                ))}
-              {(validation as { ok: false; errors: string[] }).errors.length >
-                5 && (
-                <li className="text-destructive text-xs">
-                  +
-                  {(validation as { ok: false; errors: string[] }).errors
-                    .length - 5}{" "}
-                  more errors
-                </li>
-              )}
-            </ul>
-          </div>
+            {hasErrors && errors.length > 0 && (
+              <div className="border-t px-4 pb-4">
+                <ul className="flex flex-col gap-1 pt-3">
+                  {errors.slice(0, 5).map((err, i) => (
+                    <li key={i} className="text-destructive font-mono text-xs">
+                      {err}
+                    </li>
+                  ))}
+                  {errors.length > 5 && (
+                    <li className="text-destructive text-xs">
+                      +{errors.length - 5} more errors
+                    </li>
+                  )}
+                </ul>
+              </div>
+            )}
+          </>
         )}
       </div>
-
       {/* ── Collapsible expected structure ────────────────────────────────── */}
       <div className="bg-card rounded-xl border">
         <div
           className="flex cursor-pointer items-center justify-between px-4 py-2.5"
           onClick={() => setTemplateExpanded((v) => !v)}
         >
-          <span className="text-sm font-medium">Expected Structure</span>
           <div className="flex items-center gap-2">
-            {templateExpanded && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  void handleCopyTemplate();
-                }}
-                className="text-muted-foreground h-6 gap-1 px-2 text-xs"
-              >
-                <HugeiconsIcon
-                  icon={copied ? CheckmarkCircle02Icon : Copy01Icon}
-                  size={12}
-                  className={copied ? "text-green-500" : ""}
-                />
-                {copied ? "Copied" : "Copy"}
-              </Button>
-            )}
             <HugeiconsIcon
               icon={templateExpanded ? ArrowDown01Icon : ArrowRight01Icon}
               size={13}
               className="text-muted-foreground"
             />
+            <span className="text-sm font-medium">Expected Structure</span>
           </div>
+          {templateExpanded && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                void handleCopyTemplate();
+              }}
+              className="text-muted-foreground h-6 gap-1 px-2 text-xs"
+            >
+              <HugeiconsIcon
+                icon={copied ? CheckmarkCircle02Icon : Copy01Icon}
+                size={12}
+                className={copied ? "text-green-500" : ""}
+              />
+              {copied ? "Copied" : "Copy"}
+            </Button>
+          )}
         </div>
 
         {templateExpanded && (
           <div className="border-t px-4 pt-3 pb-4">
-            <pre className="font-mono text-xs leading-relaxed break-words whitespace-pre-wrap">
+            <pre className="font-mono text-xs leading-relaxed wrap-break-word whitespace-pre-wrap">
               {templateStr}
             </pre>
-            {/* Legend */}
             <div className="text-muted-foreground mt-3 flex flex-col gap-0.5 text-xs">
               <span>
-                <code className="bg-muted rounded px-1">{'""'}</code> — text or
+                <code className="bg-muted rounded px-1">{'"'}</code> — text or
                 file URL
               </span>
               <span>
@@ -230,12 +223,14 @@ export const JsonContentPanel: React.FC<Props> = ({
               </span>
               <span>
                 <code className="bg-muted rounded px-1">{"[{...}]"}</code> —
-                object array (add more items)
+                object array
               </span>
             </div>
           </div>
         )}
       </div>
+
+      <TypesPanel structure={structure} schemaSlug={schemaSlug} />
     </div>
   );
 };

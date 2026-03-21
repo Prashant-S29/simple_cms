@@ -57,6 +57,7 @@ const SchemaContentPage: React.FC<Props> = ({
     ) {
       setActiveLocale(defaultLocale);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [langsResponse]);
 
   const isLoading = isProjectLoading || isLangsLoading;
@@ -138,8 +139,6 @@ const SchemaContentPage: React.FC<Props> = ({
 
 export default SchemaContentPage;
 
-// ─── Per-locale form + JSON side-by-side ──────────────────────────────────────
-
 interface LocaleContentFormProps {
   schemaSlug: string;
   projectId: string;
@@ -189,7 +188,6 @@ const LocaleContentForm: React.FC<LocaleContentFormProps> = ({
     },
   );
 
-  // Single handler — both form and JSON editor call this
   const handleDataChange = useCallback((updated: Record<string, unknown>) => {
     setFormData(updated);
     setIsDirty(true);
@@ -275,6 +273,7 @@ const LocaleContentForm: React.FC<LocaleContentFormProps> = ({
             structure={schemaStructure as SchemaStructure}
             data={formData}
             onChange={handleDataChange}
+            schemaSlug={schemaSlug}
           />
         </div>
       )}

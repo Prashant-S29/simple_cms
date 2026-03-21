@@ -32,7 +32,6 @@ export const JsonImportBuilder: React.FC<Props> = ({
   const [parseState, setParseState] = useState<ParseState>("idle");
   const [parseError, setParseError] = useState<string | null>(null);
   const [parsed, setParsed] = useState<SchemaStructure | null>(null);
-  // Collapsed once valid parse succeeds, expanded while editing or on error
   const [jsonExpanded, setJsonExpanded] = useState(true);
 
   const tryParse = (value: string) => {
@@ -48,8 +47,6 @@ export const JsonImportBuilder: React.FC<Props> = ({
     try {
       json = JSON.parse(value);
     } catch {
-      // Not valid JSON yet — could still be mid-typing, stay idle
-      // Only show error if the input looks complete (ends with } or ])
       const trimmed = value.trim();
       if (trimmed.endsWith("}") || trimmed.endsWith("]")) {
         setParseState("error");
@@ -68,7 +65,6 @@ export const JsonImportBuilder: React.FC<Props> = ({
       setParsed(structure);
       setParseState("parsed");
       setParseError(null);
-      // Auto-collapse the JSON section on successful parse
       setJsonExpanded(false);
     } catch (err) {
       setParseState("error");

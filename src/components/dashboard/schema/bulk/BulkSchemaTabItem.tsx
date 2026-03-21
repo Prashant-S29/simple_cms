@@ -15,8 +15,6 @@ import { jsonToSchemaStructure } from "~/lib/cms/jsonParser";
 import type { SchemaStructure } from "~/zodSchema/cmsSchema";
 import { slugify } from "~/lib/utils";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-
 export interface BulkSchemaItem {
   title: string;
   description: string;
@@ -46,7 +44,6 @@ export const BulkSchemaTabItem: React.FC<Props> = ({
     onChange(index, { ...item, ...patch });
   };
 
-  // ── Title change ──────────────────────────────────────────────────────────
   const handleTitleChange = (value: string) => {
     let titleError: string | null = null;
     const newSlug = slugify(value.trim());
@@ -61,7 +58,6 @@ export const BulkSchemaTabItem: React.FC<Props> = ({
     update({ title: value, titleError });
   };
 
-  // ── JSON change + live re-parse ───────────────────────────────────────────
   const handleJsonChange = (value: string) => {
     let structure: SchemaStructure | null = null;
     let parseError: string | null = null;
