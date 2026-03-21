@@ -5,7 +5,7 @@ import { cn } from "~/lib/utils";
 import { Spinner } from "./spinner";
 
 const buttonVariants = cva(
-  "group/button inline-flex shrink-0 items-center overflow-hidden justify-center rounded-4xl border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition-all outline-none select-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 active:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+  "group/button inline-flex shrink-0 relative items-center overflow-hidden justify-center rounded-4xl border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition-all outline-none select-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 active:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   {
     variants: {
       variant: {
@@ -61,9 +61,11 @@ function Button({
       {...props}
     >
       <div
-        className={`flex flex-col items-center ${isLoading ? "-translate-y-4.5" : "translate-y-4"} gap-4 duration-200`}
+        className={`flex w-full flex-col items-center ${isLoading ? "-translate-y-4.5" : "translate-y-4"} gap-4 duration-200`}
       >
-        <div className="flex items-center gap-2">{children}</div>
+        <div className="flex w-full items-center justify-center gap-2">
+          {children}
+        </div>
         <Spinner />
       </div>
     </ButtonPrimitive>

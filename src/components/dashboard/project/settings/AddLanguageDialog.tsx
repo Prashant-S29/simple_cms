@@ -85,7 +85,7 @@ export const AddLanguageDialog: React.FC<Props> = ({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="grid max-h-72 grid-cols-2 gap-2 overflow-y-auto py-2 pr-1">
+        <div className="grid max-h-100 grid-cols-2 gap-2 overflow-y-auto py-2 pr-1">
           {availableLocales.map((locale) => {
             const isSelected = selected.has(locale.locale);
             return (

@@ -37,14 +37,6 @@ export const languageStatusEnum = pgEnum("language_status", [
   "disabled",
 ]);
 
-/**
- * Languages configured for a project.
- *
- * Rules enforced at the application layer:
- *   - "en" is always seeded when a project is created (isDefault = true)
- *   - isDefault = true rows cannot be disabled or deleted
- *   - Only owner / admin can add, disable, enable, or delete languages
- */
 export const projectLanguage = createTable(
   "project_language",
   (d) => ({
@@ -53,11 +45,8 @@ export const projectLanguage = createTable(
       .uuid()
       .notNull()
       .references(() => project.id, { onDelete: "cascade" }),
-    /** BCP-47 locale code: "en", "ru", "ar", "fr" etc. */
     locale: d.text().notNull(),
-    /** Human-readable display name: "English", "Russian" */
     label: d.text().notNull(),
-    /** True only for the project's default language (always "en"). */
     isDefault: d.boolean().notNull().default(false),
     status: languageStatusEnum("status").notNull().default("active"),
     createdAt: d
@@ -100,6 +89,48 @@ export const cmsSchema = createTable(
   ],
 );
 
+/**
+ * Stores the manager-entered textual content for a schema × locale pair.
+ *
+ * The `content` jsonb mirrors the schemaStructure shape but with real values:
+ *   - string/text fields → ""  (empty string until filled)
+ *   - file fields        → ""  (URL string once uploaded)
+ *   - array fields       → []
+ *   - object fields      → {}  (recursively initialized)
+ *
+ * One row per (schemaId, locale). Row is created lazily on first access
+ * via the `cmsContent.getOrInit` procedure — manager never needs to
+ * explicitly create a content record.
+ */
+export const cmsContent = createTable(
+  "cms_content",
+  (d) => ({
+    id: d.uuid().primaryKey().defaultRandom(),
+    schemaId: d
+      .uuid()
+      .notNull()
+      .references(() => cmsSchema.id, { onDelete: "cascade" }),
+    projectId: d
+      .uuid()
+      .notNull()
+      .references(() => project.id, { onDelete: "cascade" }),
+    locale: d.text().notNull(),
+    content: d.jsonb().notNull().default({}),
+    updatedById: d.uuid().references(() => user.id, { onDelete: "set null" }),
+    createdAt: d
+      .timestamp({ withTimezone: true })
+      .$defaultFn(() => new Date())
+      .notNull(),
+    updatedAt: d.timestamp({ withTimezone: true }).$onUpdate(() => new Date()),
+  }),
+  (t) => [
+    index("cms_content_schema_idx").on(t.schemaId),
+    index("cms_content_project_idx").on(t.projectId),
+    index("cms_content_locale_idx").on(t.locale),
+    uniqueIndex("cms_content_schema_locale_idx").on(t.schemaId, t.locale),
+  ],
+);
+
 export const orgWithProjectsRelations = relations(org, ({ one, many }) => ({
   createdBy: one(user, {
     fields: [org.createdById],
@@ -119,6 +150,7 @@ export const projectRelations = relations(project, ({ one, many }) => ({
   }),
   schemas: many(cmsSchema),
   languages: many(projectLanguage),
+  contents: many(cmsContent),
 }));
 
 export const projectLanguageRelations = relations(
@@ -131,13 +163,29 @@ export const projectLanguageRelations = relations(
   }),
 );
 
-export const cmsSchemaRelations = relations(cmsSchema, ({ one }) => ({
+export const cmsSchemaRelations = relations(cmsSchema, ({ one, many }) => ({
   project: one(project, {
     fields: [cmsSchema.projectId],
     references: [project.id],
   }),
   createdBy: one(user, {
     fields: [cmsSchema.createdById],
+    references: [user.id],
+  }),
+  contents: many(cmsContent),
+}));
+
+export const cmsContentRelations = relations(cmsContent, ({ one }) => ({
+  schema: one(cmsSchema, {
+    fields: [cmsContent.schemaId],
+    references: [cmsSchema.id],
+  }),
+  project: one(project, {
+    fields: [cmsContent.projectId],
+    references: [project.id],
+  }),
+  updatedBy: one(user, {
+    fields: [cmsContent.updatedById],
     references: [user.id],
   }),
 }));
