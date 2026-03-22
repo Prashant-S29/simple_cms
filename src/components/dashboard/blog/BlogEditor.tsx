@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { getLocaleFlag, isRtlLocale } from "~/lib/locales";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   FloppyDiskIcon,
@@ -27,7 +28,6 @@ import { Field, FieldLabel } from "~/components/ui/field";
 import { Switch } from "~/components/ui/switch";
 import { Skeleton } from "~/components/ui/skeleton";
 import { ResourceHandler } from "~/components/common";
-import { getLocaleFlag } from "~/lib/locales";
 import { cn } from "~/lib/utils";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -173,6 +173,9 @@ const LocaleBlogEditor: React.FC<LocaleBlogEditorProps> = ({
   const utils = api.useUtils();
   const [viewMode, setViewMode] = useState<ViewMode>("split");
   const [isDirty, setIsDirty] = useState(false);
+
+  const isRtl = isRtlLocale(locale);
+  const dir = isRtl ? "rtl" : "ltr";
 
   // ── Form state ────────────────────────────────────────────────────────
   const [title, setTitle] = useState("");
@@ -474,6 +477,8 @@ const LocaleBlogEditor: React.FC<LocaleBlogEditorProps> = ({
             setIsDirty(true);
           }}
           placeholder="Post title"
+          dir={dir}
+          className={cn(isRtl && "text-right")}
         />
       </Field>
 
@@ -576,7 +581,11 @@ const LocaleBlogEditor: React.FC<LocaleBlogEditorProps> = ({
                 setIsDirty(true);
               }}
               rows={24}
-              className="rounded-none border-0 font-mono text-xs focus-visible:ring-0"
+              dir={dir}
+              className={cn(
+                "rounded-none border-0 font-mono text-xs focus-visible:ring-0",
+                isRtl && "text-right",
+              )}
               placeholder={`# My Blog Post\n\nStart writing in markdown...\n\n## Section\n\nParagraph text here.`}
               spellCheck={false}
             />
@@ -585,7 +594,11 @@ const LocaleBlogEditor: React.FC<LocaleBlogEditorProps> = ({
           {/* Preview pane */}
           {viewMode !== "editor" && (
             <div
-              className="prose prose-sm dark:prose-invert max-w-none overflow-auto p-5 text-sm"
+              dir={dir}
+              className={cn(
+                "prose prose-sm dark:prose-invert max-w-none overflow-auto p-5 text-sm",
+                isRtl && "text-right",
+              )}
               dangerouslySetInnerHTML={{ __html: renderMarkdown(body) }}
             />
           )}
