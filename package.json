@@ -61,6 +61,7 @@
     "@eslint/eslintrc": "^3.3.5",
     "@react-email/render": "^2.0.4",
     "@tailwindcss/postcss": "^4.2.1",
+    "@tailwindcss/typography": "^0.5.19",
     "@types/jszip": "^3.4.1",
     "@types/node": "^25.5.0",
     "@types/react": "^19.2.14",

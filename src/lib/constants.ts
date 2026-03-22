@@ -7,8 +7,12 @@ export const PROJECT_ADMIN_DASHBOARD_NAVLINKS = [
     segment: "",
   },
   {
-    label: "Schema",
+    label: "Schemas",
     segment: "schema",
+  },
+  {
+    label: "Blogs",
+    segment: "blog",
   },
   {
     label: "API Keys",

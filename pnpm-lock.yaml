@@ -123,6 +123,9 @@ importers:
       '@tailwindcss/postcss':
         specifier: ^4.2.1
         version: 4.2.2
+      '@tailwindcss/typography':
+        specifier: ^0.5.19
+        version: 0.5.19(tailwindcss@4.2.2)
       '@types/jszip':
         specifier: ^3.4.1
         version: 3.4.1
@@ -1976,6 +1979,11 @@ packages:
 
   '@tailwindcss/postcss@4.2.2':
     resolution: {integrity: sha512-n4goKQbW8RVXIbNKRB/45LzyUqN451deQK0nzIeauVEqjlI49slUlgKYJM2QyUzap/PcpnS7kzSUmPb1sCRvYQ==}
+
+  '@tailwindcss/typography@0.5.19':
+    resolution: {integrity: sha512-w31dd8HOx3k9vPtcQh5QHP9GwKcgbMp87j58qi6xgiBnFFtKEAgCWnDw4qUT8aHwkCp8bKvb/KGKWWHedP0AAg==}
+    peerDependencies:
+      tailwindcss: '>=3.0.0 || insiders || >=4.0.0-alpha.20 || >=4.0.0-beta.1'
 
   '@tanstack/devtools-event-client@0.4.3':
     resolution: {integrity: sha512-OZI6QyULw0FI0wjgmeYzCIfbgPsOEzwJtCpa69XrfLMtNXLGnz3d/dIabk7frg0TmHo+Ah49w5I4KC7Tufwsvw==}
@@ -4203,6 +4211,10 @@ packages:
   postal-mime@2.7.3:
     resolution: {integrity: sha512-MjhXadAJaWgYzevi46+3kLak8y6gbg0ku14O1gO/LNOuay8dO+1PtcSGvAdgDR0DoIsSaiIA8y/Ddw6MnrO0Tw==}
 
+  postcss-selector-parser@6.0.10:
+    resolution: {integrity: sha512-IQ7TZdoaqbT+LCpShg46jnZVlhWD2w6iQYAcYXfHARZ7X1t/UGhhceQDs5X0cGqKvYlHNOuv7Oa1xmb0oQuA3w==}
+    engines: {node: '>=4'}
+
   postcss-selector-parser@7.1.1:
     resolution: {integrity: sha512-orRsuYpJVw8LdAwqqLykBj9ecS5/cRHlI5+nvTo8LcCKmzDmqVORXtOIYEEQuL9D4BxtA1lm5isAqzQZCoQ6Eg==}
     engines: {node: '>=4'}
@@ -6409,6 +6421,11 @@ snapshots:
       '@tailwindcss/node': 4.2.2
       '@tailwindcss/oxide': 4.2.2
       postcss: 8.5.8
+      tailwindcss: 4.2.2
+
+  '@tailwindcss/typography@0.5.19(tailwindcss@4.2.2)':
+    dependencies:
+      postcss-selector-parser: 6.0.10
       tailwindcss: 4.2.2
 
   '@tanstack/devtools-event-client@0.4.3': {}
@@ -8676,6 +8693,11 @@ snapshots:
   possible-typed-array-names@1.1.0: {}
 
   postal-mime@2.7.3: {}
+
+  postcss-selector-parser@6.0.10:
+    dependencies:
+      cssesc: 3.0.0
+      util-deprecate: 1.0.2
 
   postcss-selector-parser@7.1.1:
     dependencies:

@@ -5,6 +5,8 @@ import { projectRouter } from "./routers/project";
 import { cmsSchemaRouter } from "./routers/cmsSchema";
 import { projectLanguageRouter } from "./routers/projectLanguage";
 import { cmsContentRouter } from "./routers/cmsContent";
+import { blogPostRouter } from "./routers/blogPost";
+import { blogContentRouter } from "./routers/blogContent";
 
 /**
  * This is the primary router for your server.
@@ -18,6 +20,8 @@ export const appRouter = createTRPCRouter({
   cmsSchema: cmsSchemaRouter,
   projectLanguage: projectLanguageRouter,
   cmsContent: cmsContentRouter,
+  blogPost: blogPostRouter,
+  blogContent: blogContentRouter,
 });
 
 // export type definition of API
