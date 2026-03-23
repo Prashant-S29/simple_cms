@@ -4,6 +4,7 @@ import { blogPost, blogPostContent } from "~/server/db/project";
 import { slugify } from "~/lib/utils";
 import { errorResponse, getErrorInfo, successResponse } from "~/lib/errors";
 import { requireProjectAccess } from "~/server/api/membershipGuard";
+import { logActivity } from "~/lib/activityLog";
 import {
   CreateBlogPostSchema,
   DeleteBlogPostSchema,
@@ -55,6 +56,17 @@ export const blogPostRouter = createTRPCRouter({
           createdById: ctx.session.user.id,
         })
         .returning();
+
+      await logActivity({
+        db: ctx.db,
+        projectId: input.projectId,
+        userId: ctx.session.user.id,
+        action: "blog.created",
+        resourceType: "blog",
+        resourceId: newPost!.id,
+        resourceSlug: newPost!.slug,
+        metadata: { slug: newPost!.slug },
+      });
 
       return successResponse(newPost!, `Blog post "${slug}" has been created.`);
     }),
@@ -213,6 +225,17 @@ export const blogPostRouter = createTRPCRouter({
       if (!post) return errorResponse(getErrorInfo("project", "NOT_FOUND"));
 
       await ctx.db.delete(blogPost).where(eq(blogPost.id, input.id));
+
+      await logActivity({
+        db: ctx.db,
+        projectId: input.projectId,
+        userId: ctx.session.user.id,
+        action: "blog.deleted",
+        resourceType: "blog",
+        resourceId: input.id,
+        resourceSlug: post.slug,
+        metadata: { slug: post.slug },
+      });
 
       return successResponse(
         null,

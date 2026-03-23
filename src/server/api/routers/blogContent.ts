@@ -1,5 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
+import { logActivity } from "~/lib/activityLog";
 import {
   blogPost,
   blogPostContent,
@@ -188,6 +189,23 @@ export const blogContentRouter = createTRPCRouter({
         })
         .returning();
 
+      const [post] = await ctx.db
+        .select({ slug: blogPost.slug })
+        .from(blogPost)
+        .where(eq(blogPost.id, postId))
+        .limit(1);
+
+      await logActivity({
+        db: ctx.db,
+        projectId,
+        userId: ctx.session.user.id,
+        action: "blog.saved",
+        resourceType: "blog",
+        resourceId: upserted!.id,
+        resourceSlug: post?.slug,
+        metadata: { locale, postId },
+      });
+
       return successResponse(upserted!, "Blog content saved.");
     }),
 
@@ -245,6 +263,23 @@ export const blogContentRouter = createTRPCRouter({
         .where(eq(blogPostContent.id, existing.id))
         .returning();
 
+      const [post] = await ctx.db
+        .select({ slug: blogPost.slug })
+        .from(blogPost)
+        .where(eq(blogPost.id, postId))
+        .limit(1);
+
+      await logActivity({
+        db: ctx.db,
+        projectId,
+        userId: ctx.session.user.id,
+        action: "blog.published",
+        resourceType: "blog",
+        resourceId: existing.id,
+        resourceSlug: post?.slug,
+        metadata: { locale },
+      });
+
       return successResponse(updated!, "Post published successfully.");
     }),
 
@@ -291,6 +326,23 @@ export const blogContentRouter = createTRPCRouter({
         .where(eq(blogPostContent.id, existing.id))
         .returning();
 
+      const [post] = await ctx.db
+        .select({ slug: blogPost.slug })
+        .from(blogPost)
+        .where(eq(blogPost.id, postId))
+        .limit(1);
+
+      await logActivity({
+        db: ctx.db,
+        projectId,
+        userId: ctx.session.user.id,
+        action: "blog.unpublished",
+        resourceType: "blog",
+        resourceId: existing.id,
+        resourceSlug: post?.slug,
+        metadata: { locale },
+      });
+
       return successResponse(updated!, "Post moved back to draft.");
     }),
 
@@ -336,6 +388,23 @@ export const blogContentRouter = createTRPCRouter({
         })
         .where(eq(blogPostContent.id, existing.id))
         .returning();
+
+      const [post] = await ctx.db
+        .select({ slug: blogPost.slug })
+        .from(blogPost)
+        .where(eq(blogPost.id, postId))
+        .limit(1);
+
+      await logActivity({
+        db: ctx.db,
+        projectId,
+        userId: ctx.session.user.id,
+        action: "blog.toggled_active",
+        resourceType: "blog",
+        resourceId: existing.id,
+        resourceSlug: post?.slug,
+        metadata: { locale, isActive },
+      });
 
       return successResponse(
         updated!,

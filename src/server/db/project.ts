@@ -15,6 +15,14 @@ export const blogPostStatusEnum = pgEnum("blog_post_status", [
   "published",
 ]);
 
+export const apiKeyStatusEnum = pgEnum("api_key_status", ["active", "revoked"]);
+
+export const clientTypeEnum = pgEnum("client_type", [
+  "browser",
+  "server",
+  "unknown",
+]);
+
 // ─── project ──────────────────────────────────────────────────────────────────
 
 export const project = createTable(
@@ -135,10 +143,6 @@ export const cmsContent = createTable(
 
 // ─── blog_post ────────────────────────────────────────────────────────────────
 
-/**
- * The canonical blog post identity — created by admin with just a slug.
- * All actual content lives in blog_post_content (one row per locale).
- */
 export const blogPost = createTable(
   "blog_post",
   (d) => ({
@@ -147,7 +151,6 @@ export const blogPost = createTable(
       .uuid()
       .notNull()
       .references(() => project.id, { onDelete: "cascade" }),
-    /** URL-safe slug — used as the API identifier. Unique per project. */
     slug: d.text().notNull(),
     createdById: d
       .uuid()
@@ -167,17 +170,6 @@ export const blogPost = createTable(
 
 // ─── blog_post_content ────────────────────────────────────────────────────────
 
-/**
- * Manager-editable content for a blog post × locale.
- *
- * State logic (checked in this order by the API):
- *   isActive = false            → 404 (hidden regardless of status)
- *   isActive = true, draft      → 404 (not yet published)
- *   isActive = true, published  → 200 ✓
- *
- * publishedAt is set once on first publish — never reset on unpublish/republish.
- * customMeta holds manager-defined key-value pairs beyond the standard fields.
- */
 export const blogPostContent = createTable(
   "blog_post_content",
   (d) => ({
@@ -186,44 +178,27 @@ export const blogPostContent = createTable(
       .uuid()
       .notNull()
       .references(() => blogPost.id, { onDelete: "cascade" }),
-    /** Denormalized for efficient project-level queries */
     projectId: d
       .uuid()
       .notNull()
       .references(() => project.id, { onDelete: "cascade" }),
     locale: d.text().notNull(),
-
-    // ── Core content ────────────────────────────────────────────────────────
     title: d.text(),
     excerpt: d.text(),
-    /** URL string — resolved to CDN URL after upload */
     coverImage: d.text(),
-    /** Markdown string — source of truth for the blog body */
     body: d.text(),
-
-    // ── Author metadata ──────────────────────────────────────────────────────
     authorName: d.text(),
     authorDesignation: d.text(),
     authorCompany: d.text(),
-
-    // ── Taxonomy ─────────────────────────────────────────────────────────────
     tags: d
       .text()
       .array()
       .notNull()
       .default(sql`ARRAY[]::text[]`),
-
-    // ── Manager-defined extra metadata ───────────────────────────────────────
-    /** Free-form key-value pairs: { "readTime": "5 min", "series": "AI Weekly" } */
     customMeta: d.jsonb().notNull().default({}),
-
-    // ── State ────────────────────────────────────────────────────────────────
     status: blogPostStatusEnum("status").notNull().default("draft"),
-    /** Master on/off. false = invisible to API regardless of status. */
     isActive: d.boolean().notNull().default(true),
-    /** Set once on first publish — never reset. */
     publishedAt: d.timestamp({ withTimezone: true }),
-
     updatedById: d.uuid().references(() => user.id, { onDelete: "set null" }),
     createdAt: d
       .timestamp({ withTimezone: true })
@@ -237,6 +212,191 @@ export const blogPostContent = createTable(
     index("blog_content_locale_idx").on(t.locale),
     index("blog_content_status_idx").on(t.status),
     uniqueIndex("blog_content_post_locale_idx").on(t.postId, t.locale),
+  ],
+);
+
+// ─── project_api_key ──────────────────────────────────────────────────────────
+
+/**
+ * API keys for authenticating external requests to the content API.
+ *
+ * Security model:
+ *   - Raw key is shown ONCE on creation and never stored
+ *   - keyHash: sha256(rawKey) — used for lookup on every request
+ *   - keyPrefix: first 12 chars of raw key — shown in UI so users can
+ *     identify which key is which without exposing the secret
+ *
+ * Key format:  scms_<32 random chars>
+ * Example:     scms_xK9mP2nQ8rT5vW1yZ3bE6fH0jL4oS7u
+ */
+export const projectApiKey = createTable(
+  "project_api_key",
+  (d) => ({
+    id: d.uuid().primaryKey().defaultRandom(),
+    projectId: d
+      .uuid()
+      .notNull()
+      .references(() => project.id, { onDelete: "cascade" }),
+    /** Human-readable label: "Production", "Staging", "Netlify" */
+    name: d.text().notNull(),
+    /** sha256 hash of the raw key — used for auth lookup */
+    keyHash: d.text().notNull().unique(),
+    /** First 12 chars of raw key — safe to display in UI */
+    keyPrefix: d.text().notNull(),
+    status: apiKeyStatusEnum("status").notNull().default("active"),
+    /** Updated fire-and-forget on every successful request */
+    lastUsedAt: d.timestamp({ withTimezone: true }),
+    createdById: d
+      .uuid()
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    createdAt: d
+      .timestamp({ withTimezone: true })
+      .$defaultFn(() => new Date())
+      .notNull(),
+    /** Set when status → revoked */
+    revokedAt: d.timestamp({ withTimezone: true }),
+    revokedById: d.uuid().references(() => user.id, { onDelete: "set null" }),
+  }),
+  (t) => [
+    index("api_key_project_idx").on(t.projectId),
+    index("api_key_hash_idx").on(t.keyHash),
+    index("api_key_status_idx").on(t.status),
+  ],
+);
+
+// ─── api_request_log ──────────────────────────────────────────────────────────
+
+/**
+ * Append-only log of every inbound API request.
+ * Written fire-and-forget — never blocks the response.
+ *
+ * Designed for future analytics:
+ *   - requests over time per project
+ *   - error rate by errorCode
+ *   - most requested schemas / locales
+ *   - geographic distribution (country)
+ *   - key usage breakdown
+ *   - response time percentiles (durationMs)
+ *   - bandwidth (responseSizeBytes)
+ *
+ * apiKeyId is nullable — set to null when the key was invalid/missing
+ * so we can still log the failed attempt.
+ */
+export const apiRequestLog = createTable(
+  "api_request_log",
+  (d) => ({
+    id: d.uuid().primaryKey().defaultRandom(),
+    projectId: d
+      .uuid()
+      .notNull()
+      .references(() => project.id, { onDelete: "cascade" }),
+    /** Null when key was missing or invalid */
+    apiKeyId: d
+      .uuid()
+      .references(() => projectApiKey.id, { onDelete: "set null" }),
+
+    // ── What was requested ─────────────────────────────────────────────────
+    /** "content" | "blogs.list" | "blogs.detail" */
+    endpoint: d.text().notNull(),
+    /** Schema slug or blog slug — null for list endpoints */
+    resourceSlug: d.text(),
+    locale: d.text(),
+
+    // ── Response ───────────────────────────────────────────────────────────
+    statusCode: d.integer().notNull(),
+    /** Machine-readable error code e.g. "SCHEMA_NOT_FOUND" */
+    errorCode: d.text(),
+    /** Milliseconds from request receipt to response sent */
+    durationMs: d.integer().notNull(),
+    /** Bytes in the JSON response body */
+    responseSizeBytes: d.integer(),
+
+    // ── Client info ────────────────────────────────────────────────────────
+    /** sha256(ip) — for rate-limit analysis without storing raw IPs */
+    ipHash: d.text(),
+    /** ISO 3166-1 alpha-2 country code resolved at request time */
+    country: d.text(),
+    clientType: clientTypeEnum("client_type").notNull().default("unknown"),
+
+    createdAt: d
+      .timestamp({ withTimezone: true })
+      .$defaultFn(() => new Date())
+      .notNull(),
+  }),
+  (t) => [
+    // Primary query patterns — all analytics queries start with projectId + time
+    index("req_log_project_time_idx").on(t.projectId, t.createdAt),
+    index("req_log_api_key_idx").on(t.apiKeyId),
+    index("req_log_endpoint_idx").on(t.endpoint),
+    index("req_log_status_idx").on(t.statusCode),
+    index("req_log_country_idx").on(t.country),
+  ],
+);
+
+// ─── activity_log ─────────────────────────────────────────────────────────────
+
+/**
+ * Audit trail of every CMS action performed by a user.
+ * Written synchronously inside tRPC procedures (small write, negligible cost).
+ *
+ * Actions logged:
+ *   content.saved        schema slug + locale
+ *   content.reset        schema slug
+ *   blog.published       post slug + locale
+ *   blog.unpublished     post slug + locale
+ *   blog.saved           post slug + locale
+ *   schema.created       schema slug
+ *   schema.deleted       schema slug
+ *   language.added       locale
+ *   language.disabled    locale
+ *   language.deleted     locale
+ *   api_key.created      key name + prefix
+ *   api_key.revoked      key name + prefix
+ *   member.invited       invitee email + role
+ *   member.removed       member id + role
+ */
+export const activityLog = createTable(
+  "activity_log",
+  (d) => ({
+    id: d.uuid().primaryKey().defaultRandom(),
+    projectId: d
+      .uuid()
+      .notNull()
+      .references(() => project.id, { onDelete: "cascade" }),
+    userId: d
+      .uuid()
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    /**
+     * Dot-namespaced action string.
+     * Format: "<resource>.<verb>"
+     * e.g. "content.saved", "api_key.revoked"
+     */
+    action: d.text().notNull(),
+    /** The primary resource type acted on */
+    resourceType: d.text().notNull(),
+    /** UUID or slug of the resource */
+    resourceId: d.text().notNull(),
+    /** Human-readable slug for display (optional) */
+    resourceSlug: d.text(),
+    /**
+     * Extra context as flat jsonb.
+     * e.g. { locale: "en", schemaSlug: "home" }
+     * Keep shallow — no nested objects.
+     */
+    metadata: d.jsonb().notNull().default({}),
+    createdAt: d
+      .timestamp({ withTimezone: true })
+      .$defaultFn(() => new Date())
+      .notNull(),
+  }),
+  (t) => [
+    // Most queries: "show me activity for this project, most recent first"
+    index("activity_log_project_time_idx").on(t.projectId, t.createdAt),
+    index("activity_log_user_idx").on(t.userId),
+    index("activity_log_action_idx").on(t.action),
+    index("activity_log_resource_type_idx").on(t.resourceType),
   ],
 );
 
@@ -257,6 +417,9 @@ export const projectRelations = relations(project, ({ one, many }) => ({
   languages: many(projectLanguage),
   contents: many(cmsContent),
   blogPosts: many(blogPost),
+  apiKeys: many(projectApiKey),
+  requestLogs: many(apiRequestLog),
+  activityLogs: many(activityLog),
 }));
 
 export const projectLanguageRelations = relations(
@@ -325,3 +488,41 @@ export const blogPostContentRelations = relations(
     }),
   }),
 );
+
+export const projectApiKeyRelations = relations(
+  projectApiKey,
+  ({ one, many }) => ({
+    project: one(project, {
+      fields: [projectApiKey.projectId],
+      references: [project.id],
+    }),
+    createdBy: one(user, {
+      fields: [projectApiKey.createdById],
+      references: [user.id],
+    }),
+    revokedBy: one(user, {
+      fields: [projectApiKey.revokedById],
+      references: [user.id],
+    }),
+    requestLogs: many(apiRequestLog),
+  }),
+);
+
+export const apiRequestLogRelations = relations(apiRequestLog, ({ one }) => ({
+  project: one(project, {
+    fields: [apiRequestLog.projectId],
+    references: [project.id],
+  }),
+  apiKey: one(projectApiKey, {
+    fields: [apiRequestLog.apiKeyId],
+    references: [projectApiKey.id],
+  }),
+}));
+
+export const activityLogRelations = relations(activityLog, ({ one }) => ({
+  project: one(project, {
+    fields: [activityLog.projectId],
+    references: [project.id],
+  }),
+  user: one(user, { fields: [activityLog.userId], references: [user.id] }),
+}));

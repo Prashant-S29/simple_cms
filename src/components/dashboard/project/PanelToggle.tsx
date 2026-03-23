@@ -55,11 +55,10 @@ export const PanelToggle: React.FC = () => {
 
     if (target === "admin") {
       if (currentBlogSlug) {
-        // manager blog post → admin blog post (if admin has a detail page)
-        return `${base}/admin/blog/${currentBlogSlug}${qs}`;
+        // manager blog post → admin blog LIST (no detail page on admin side)
+        return `${base}/admin/blog${qs}`;
       }
       if (isInManagerBlog) {
-        // manager blog list → admin blog list
         return `${base}/admin/blog${qs}`;
       }
       if (currentSchemaSlug) {

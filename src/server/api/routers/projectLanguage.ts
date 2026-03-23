@@ -6,6 +6,7 @@ import { projectLanguage } from "~/server/db/project";
 import { errorResponse, getErrorInfo, successResponse } from "~/lib/errors";
 import { requireProjectAccess } from "~/server/api/membershipGuard";
 // import { getLocaleLabel } from "~/lib/locales";
+import { logActivity } from "~/lib/activityLog";
 import {
   AddLanguageSchema,
   BulkAddLanguageSchema,
@@ -93,6 +94,17 @@ export const projectLanguageRouter = createTRPCRouter({
         })
         .returning();
 
+      await logActivity({
+        db: ctx.db,
+        projectId: input.projectId,
+        userId: ctx.session.user.id,
+        action: "language.added",
+        resourceType: "language",
+        resourceId: newLang!.id,
+        resourceSlug: newLang!.locale,
+        metadata: { locale: input.locale, label: input.label },
+      });
+
       return successResponse(
         newLang!,
         `"${input.label}" has been added to the project.`,
@@ -143,6 +155,17 @@ export const projectLanguageRouter = createTRPCRouter({
           })),
         )
         .returning();
+
+      await logActivity({
+        db: ctx.db,
+        projectId,
+        userId: ctx.session.user.id,
+        action: "language.added",
+        resourceType: "language",
+        resourceId: inserted[0]!.id,
+        resourceSlug: inserted[0]!.locale,
+        metadata: { locales: toInsert.map((l) => l.locale).join(", ") },
+      });
 
       const skipped = locales.length - toInsert.length;
       const msg =
@@ -200,6 +223,18 @@ export const projectLanguageRouter = createTRPCRouter({
         .where(eq(projectLanguage.id, input.id))
         .returning();
 
+      await logActivity({
+        db: ctx.db,
+        projectId: input.projectId,
+        userId: ctx.session.user.id,
+        action:
+          input.status === "active" ? "language.enabled" : "language.disabled",
+        resourceType: "language",
+        resourceId: input.id,
+        resourceSlug: lang.locale,
+        metadata: { locale: lang.locale, label: lang.label },
+      });
+
       const action = input.status === "active" ? "enabled" : "disabled";
       return successResponse(updated!, `"${lang.label}" has been ${action}.`);
     }),
@@ -250,6 +285,17 @@ export const projectLanguageRouter = createTRPCRouter({
       await ctx.db
         .delete(projectLanguage)
         .where(eq(projectLanguage.id, input.id));
+
+      await logActivity({
+        db: ctx.db,
+        projectId: input.projectId,
+        userId: ctx.session.user.id,
+        action: "language.deleted",
+        resourceType: "language",
+        resourceId: input.id,
+        resourceSlug: lang.locale,
+        metadata: { locale: lang.locale, label: lang.label },
+      });
 
       return successResponse(
         null,

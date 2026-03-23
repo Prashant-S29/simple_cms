@@ -123,7 +123,7 @@ export const ManagerSideMenu: React.FC = () => {
                 size={13}
                 className="shrink-0"
               />
-              <span className="truncate font-mono text-xs">{post.slug}</span>
+              <span className="truncate text-xs">{post.slug}</span>
             </SideLink>
           ))
         )}

@@ -6,6 +6,7 @@ import { requireProjectAccess } from "~/server/api/membershipGuard";
 import { initContentFromSchema } from "~/lib/cms/contentInitializer";
 import type { SchemaStructure } from "~/zodSchema/cmsSchema";
 import { GetContentSchema, SaveContentSchema } from "~/zodSchema/cmsContent";
+import { logActivity } from "~/lib/activityLog";
 
 export const cmsContentRouter = createTRPCRouter({
   /**
@@ -200,6 +201,24 @@ export const cmsContentRouter = createTRPCRouter({
           },
         })
         .returning();
+
+      // Resolve schema slug for activity log (schemaId is known, slug is not in input)
+      const [schemaRow] = await ctx.db
+        .select({ slug: cmsSchema.slug })
+        .from(cmsSchema)
+        .where(eq(cmsSchema.id, schemaId))
+        .limit(1);
+
+      await logActivity({
+        db: ctx.db,
+        projectId,
+        userId: ctx.session.user.id,
+        action: "content.saved",
+        resourceType: "content",
+        resourceId: upserted!.id,
+        resourceSlug: schemaRow?.slug,
+        metadata: { locale, schemaId },
+      });
 
       return successResponse(upserted!, "Content saved successfully.");
     }),

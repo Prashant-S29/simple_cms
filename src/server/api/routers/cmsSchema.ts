@@ -1,9 +1,10 @@
 import { and, asc, count, desc, eq, ilike, inArray, sql } from "drizzle-orm";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
-import { cmsSchema } from "~/server/db/project";
+import { activityLog, cmsSchema } from "~/server/db/project";
 import { slugify } from "~/lib/utils";
 import { errorResponse, getErrorInfo, successResponse } from "~/lib/errors";
 import { requireProjectAccess } from "~/server/api/membershipGuard";
+import { logActivity } from "~/lib/activityLog";
 import {
   BulkCreateCmsSchemaSchema,
   CreateCmsSchemaSchema,
@@ -60,6 +61,17 @@ export const cmsSchemaRouter = createTRPCRouter({
           createdById: ctx.session.user.id,
         })
         .returning();
+
+      await logActivity({
+        db: ctx.db,
+        projectId: input.projectId,
+        userId: ctx.session.user.id,
+        action: "schema.created",
+        resourceType: "schema",
+        resourceId: newSchema!.id,
+        resourceSlug: newSchema!.slug,
+        metadata: { title: input.title },
+      });
 
       return successResponse(
         newSchema!,
@@ -157,6 +169,21 @@ export const cmsSchemaRouter = createTRPCRouter({
           }
         }
       });
+
+      // Log one activity entry per successfully created schema
+      if (created.length > 0) {
+        await ctx.db.insert(activityLog).values(
+          created.map((s) => ({
+            projectId,
+            userId: ctx.session.user.id,
+            action: "schema.created" as const,
+            resourceType: "schema" as const,
+            resourceId: s.id,
+            resourceSlug: s.slug,
+            metadata: { title: s.title, bulk: true },
+          })),
+        );
+      }
 
       return successResponse(
         {
@@ -320,15 +347,23 @@ export const cmsSchemaRouter = createTRPCRouter({
             title: input.title,
             slug: slugify(input.title),
           }),
-          // undefined = not provided (leave as-is)
-          // empty string = explicitly cleared → set to null
-          // any other string = update to that value
           ...(input.description !== undefined && {
             description: input.description?.trim() || null,
           }),
         })
         .where(eq(cmsSchema.id, input.id))
         .returning();
+
+      await logActivity({
+        db: ctx.db,
+        projectId: input.projectId,
+        userId: ctx.session.user.id,
+        action: "schema.updated",
+        resourceType: "schema",
+        resourceId: updated!.id,
+        resourceSlug: updated!.slug,
+        metadata: { title: updated!.title },
+      });
 
       return successResponse(updated!, "Schema updated successfully.");
     }),
@@ -346,7 +381,11 @@ export const cmsSchemaRouter = createTRPCRouter({
       if (!guard.ok) return guard.response;
 
       const [existing] = await ctx.db
-        .select({ id: cmsSchema.id, title: cmsSchema.title })
+        .select({
+          id: cmsSchema.id,
+          title: cmsSchema.title,
+          slug: cmsSchema.slug,
+        })
         .from(cmsSchema)
         .where(
           and(
@@ -365,6 +404,17 @@ export const cmsSchemaRouter = createTRPCRouter({
         .set({ schemaStructure: null })
         .where(eq(cmsSchema.id, input.id))
         .returning();
+
+      await logActivity({
+        db: ctx.db,
+        projectId: input.projectId,
+        userId: ctx.session.user.id,
+        action: "schema.structure_reset",
+        resourceType: "schema",
+        resourceId: input.id,
+        resourceSlug: existing.slug,
+        metadata: { title: existing.title },
+      });
 
       return successResponse(
         updated!,
@@ -385,7 +435,11 @@ export const cmsSchemaRouter = createTRPCRouter({
       if (!guard.ok) return guard.response;
 
       const [existing] = await ctx.db
-        .select({ id: cmsSchema.id, title: cmsSchema.title })
+        .select({
+          id: cmsSchema.id,
+          title: cmsSchema.title,
+          slug: cmsSchema.slug,
+        })
         .from(cmsSchema)
         .where(
           and(
@@ -400,6 +454,17 @@ export const cmsSchemaRouter = createTRPCRouter({
       }
 
       await ctx.db.delete(cmsSchema).where(eq(cmsSchema.id, input.id));
+
+      await logActivity({
+        db: ctx.db,
+        projectId: input.projectId,
+        userId: ctx.session.user.id,
+        action: "schema.deleted",
+        resourceType: "schema",
+        resourceId: input.id,
+        resourceSlug: existing.slug,
+        metadata: { title: existing.title },
+      });
 
       return successResponse(
         null,
@@ -420,7 +485,11 @@ export const cmsSchemaRouter = createTRPCRouter({
       if (!guard.ok) return guard.response;
 
       const [existing] = await ctx.db
-        .select({ id: cmsSchema.id, title: cmsSchema.title })
+        .select({
+          id: cmsSchema.id,
+          title: cmsSchema.title,
+          slug: cmsSchema.slug,
+        })
         .from(cmsSchema)
         .where(
           and(
@@ -439,6 +508,17 @@ export const cmsSchemaRouter = createTRPCRouter({
         .set({ schemaStructure: input.schemaStructure })
         .where(eq(cmsSchema.id, input.id))
         .returning();
+
+      await logActivity({
+        db: ctx.db,
+        projectId: input.projectId,
+        userId: ctx.session.user.id,
+        action: "schema.structure_saved",
+        resourceType: "schema",
+        resourceId: input.id,
+        resourceSlug: existing.slug,
+        metadata: { title: existing.title },
+      });
 
       return successResponse(updated!, "Schema structure saved successfully.");
     }),
