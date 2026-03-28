@@ -8,14 +8,19 @@ import {
   hashIp,
   resolveApiKey,
   writeRequestLog,
+} from "~/lib/external_api_management/apiAuth";
+import {
   apiErrorResponse,
   apiSuccessResponse,
+  handleOptions,
+  withCors,
 } from "~/lib/external_api_management";
+import { parseContentParams } from "~/lib/external_api_management/api";
 import { initContentFromSchema } from "~/lib/cms/contentInitializer";
 import type { SchemaStructure } from "~/zodSchema/cmsSchema";
-import { parseContentParams } from "~/lib/external_api_management/api";
 
 export const runtime = "nodejs";
+export const OPTIONS = handleOptions;
 
 export async function GET(req: NextRequest): Promise<Response> {
   const start = Date.now();
@@ -28,18 +33,8 @@ export async function GET(req: NextRequest): Promise<Response> {
   const auth = await resolveApiKey(req);
 
   if (!auth.ok) {
-    writeRequestLog({
-      projectId: "unknown",
-      apiKeyId: null,
-      endpoint: "content",
-      statusCode: 401,
-      errorCode: auth.errorKey,
-      durationMs: Date.now() - start,
-      ipHash,
-      country,
-      clientType,
-    });
-    return buildAuthErrorResponse(auth);
+    // No log — projectId unknown, would violate FK
+    return withCors(buildAuthErrorResponse(auth));
   }
 
   const { projectId, apiKeyId } = auth;
@@ -49,7 +44,7 @@ export async function GET(req: NextRequest): Promise<Response> {
   const parsed = parseContentParams(searchParams);
 
   if (!parsed.ok) {
-    writeRequestLog({
+    await writeRequestLog({
       projectId,
       apiKeyId,
       endpoint: "content",
@@ -60,12 +55,12 @@ export async function GET(req: NextRequest): Promise<Response> {
       country,
       clientType,
     });
-    return parsed.response;
+    return withCors(parsed.response);
   }
 
   const { schemaSlug, locale } = parsed;
 
-  // ── Verify locale is active ────────────────────────────────────────────────
+  // ── Verify locale ──────────────────────────────────────────────────────────
   const [lang] = await db
     .select({ status: projectLanguage.status })
     .from(projectLanguage)
@@ -78,11 +73,7 @@ export async function GET(req: NextRequest): Promise<Response> {
     .limit(1);
 
   if (!lang) {
-    const res = apiErrorResponse(
-      "LOCALE_NOT_FOUND",
-      `Locale "${locale}" is not configured for this project.`,
-    );
-    writeRequestLog({
+    await writeRequestLog({
       projectId,
       apiKeyId,
       endpoint: "content",
@@ -95,15 +86,16 @@ export async function GET(req: NextRequest): Promise<Response> {
       country,
       clientType,
     });
-    return res;
+    return withCors(
+      apiErrorResponse(
+        "LOCALE_NOT_FOUND",
+        `Locale "${locale}" is not configured for this project.`,
+      ),
+    );
   }
 
   if (lang.status === "disabled") {
-    const res = apiErrorResponse(
-      "LOCALE_DISABLED",
-      `Locale "${locale}" is disabled. Contact the project admin.`,
-    );
-    writeRequestLog({
+    await writeRequestLog({
       projectId,
       apiKeyId,
       endpoint: "content",
@@ -116,7 +108,12 @@ export async function GET(req: NextRequest): Promise<Response> {
       country,
       clientType,
     });
-    return res;
+    return withCors(
+      apiErrorResponse(
+        "LOCALE_DISABLED",
+        `Locale "${locale}" is disabled. Contact the project admin.`,
+      ),
+    );
   }
 
   // ── Resolve schema ─────────────────────────────────────────────────────────
@@ -133,11 +130,7 @@ export async function GET(req: NextRequest): Promise<Response> {
     .limit(1);
 
   if (!schemaRow) {
-    const res = apiErrorResponse(
-      "SCHEMA_NOT_FOUND",
-      `Schema "${schemaSlug}" not found.`,
-    );
-    writeRequestLog({
+    await writeRequestLog({
       projectId,
       apiKeyId,
       endpoint: "content",
@@ -150,15 +143,14 @@ export async function GET(req: NextRequest): Promise<Response> {
       country,
       clientType,
     });
-    return res;
+    return withCors(
+      apiErrorResponse("SCHEMA_NOT_FOUND", `Schema "${schemaSlug}" not found.`),
+    );
   }
 
   // ── Fetch content ──────────────────────────────────────────────────────────
   const [contentRow] = await db
-    .select({
-      content: cmsContent.content,
-      updatedAt: cmsContent.updatedAt,
-    })
+    .select({ content: cmsContent.content, updatedAt: cmsContent.updatedAt })
     .from(cmsContent)
     .where(
       and(eq(cmsContent.schemaId, schemaRow.id), eq(cmsContent.locale, locale)),
@@ -171,18 +163,20 @@ export async function GET(req: NextRequest): Promise<Response> {
       ? initContentFromSchema(schemaRow.schemaStructure as SchemaStructure)
       : {});
 
-  const res = apiSuccessResponse(
-    {
-      schema: schemaSlug,
-      locale,
-      content,
-      updatedAt: contentRow?.updatedAt ?? null,
-    },
-    "Content fetched successfully.",
-    { cacheSeconds: 60 },
+  const res = withCors(
+    apiSuccessResponse(
+      {
+        schema: schemaSlug,
+        locale,
+        content,
+        updatedAt: contentRow?.updatedAt ?? null,
+      },
+      "Content fetched successfully.",
+      { cacheSeconds: 60 },
+    ),
   );
 
-  writeRequestLog({
+  await writeRequestLog({
     projectId,
     apiKeyId,
     endpoint: "content",

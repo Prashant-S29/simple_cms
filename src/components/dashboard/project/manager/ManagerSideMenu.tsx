@@ -8,7 +8,6 @@ import {
   ArrowDown01Icon,
   ArrowRight01Icon,
   Database02Icon,
-  FolderLibraryIcon,
   Folder01Icon,
   Alert02Icon,
   FileEditIcon,
@@ -56,7 +55,7 @@ export const ManagerSideMenu: React.FC = () => {
     return orgId ? `${base}?orgId=${orgId}` : base;
   };
 
-  const isFilesActive = pathname.includes("/files");
+  // const isFilesActive = pathname.includes("/files");
   const activeSchemaSlug = pathname.match(/\/content\/([^/?]+)/)?.[1] ?? null;
   const activeBlogSlug = pathname.match(/\/blog\/([^/?]+)/)?.[1] ?? null;
 
@@ -132,14 +131,14 @@ export const ManagerSideMenu: React.FC = () => {
       <div className="bg-border my-1 h-px" />
 
       {/* ── Files ─────────────────────────────────────────────────────────── */}
-      <SideLink href={buildHref("files")} active={isFilesActive}>
+      {/*<SideLink href={buildHref("files")} active={isFilesActive}>
         <HugeiconsIcon
           icon={FolderLibraryIcon}
           size={13}
           className="shrink-0"
         />
         Files
-      </SideLink>
+      </SideLink>*/}
     </div>
   );
 };

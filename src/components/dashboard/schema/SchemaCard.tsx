@@ -63,7 +63,6 @@ export const SchemaCard: React.FC<Props> = ({
           aria-label={schema.title}
         />
 
-        {/* Left: icon + title */}
         <div className="flex items-center gap-2">
           <HugeiconsIcon
             icon={Folder01Icon}
@@ -73,7 +72,6 @@ export const SchemaCard: React.FC<Props> = ({
           <span className="text-sm font-medium capitalize">{schema.title}</span>
         </div>
 
-        {/* Right: warning + menu */}
         <div
           className="relative z-20 flex items-center gap-1"
           onClick={(e) => e.stopPropagation()}

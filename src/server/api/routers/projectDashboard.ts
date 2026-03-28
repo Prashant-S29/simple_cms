@@ -1,4 +1,4 @@
-import { and, count, desc, eq, gte, sql } from "drizzle-orm";
+import { and, count, desc, eq, gte, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import {
@@ -6,11 +6,11 @@ import {
   apiRequestLog,
   blogPost,
   blogPostContent,
-  cmsContent,
   cmsSchema,
   projectApiKey,
   projectLanguage,
 } from "~/server/db/project";
+import { orgMember, orgMemberProject } from "~/server/db/orgMember";
 import { user } from "~/server/db/schema";
 import { successResponse } from "~/lib/errors";
 import { requireProjectAccess } from "~/server/api/membershipGuard";
@@ -23,16 +23,10 @@ const DashboardInputSchema = z.object({
 const AnalyticsInputSchema = z.object({
   projectId: z.string().uuid(),
   orgId: z.string().uuid(),
-  /** Number of days to look back. Default 30. */
   days: z.number().int().min(1).max(90).default(30),
 });
 
 export const projectDashboardRouter = createTRPCRouter({
-  /**
-   * Overview stats for the project dashboard header cards.
-   * Returns counts for schemas, blogs, languages, active API keys.
-   * Also returns per-schema content fill status per active locale.
-   */
   getStats: protectedProcedure
     .input(DashboardInputSchema)
     .query(async ({ ctx, input }) => {
@@ -53,7 +47,14 @@ export const projectDashboardRouter = createTRPCRouter({
         langCountResult,
         activeKeyCountResult,
         publishedBlogCountResult,
-        contentCountResult,
+        schemasWithoutStructureResult,
+        recentSchemasResult,
+        recentBlogsResult,
+        apiKeyListResult,
+        adminCountResult,
+        managerCountResult,
+        adminListResult,
+        managerListResult,
       ] = await Promise.all([
         // Total schemas
         ctx.db
@@ -78,7 +79,7 @@ export const projectDashboardRouter = createTRPCRouter({
             ),
           ),
 
-        // Active API keys
+        // Active API keys count
         ctx.db
           .select({ count: count() })
           .from(projectApiKey)
@@ -101,57 +102,149 @@ export const projectDashboardRouter = createTRPCRouter({
             ),
           ),
 
-        // Content rows that have been filled (content != {})
+        // Schemas without structure
         ctx.db
           .select({ count: count() })
-          .from(cmsContent)
-          .where(eq(cmsContent.projectId, projectId)),
+          .from(cmsSchema)
+          .where(
+            and(
+              eq(cmsSchema.projectId, projectId),
+              sql`${cmsSchema.schemaStructure} IS NULL`,
+            ),
+          ),
+
+        // Recent 4 schemas
+        ctx.db
+          .select({
+            id: cmsSchema.id,
+            title: cmsSchema.title,
+            slug: cmsSchema.slug,
+            hasStructure: cmsSchema.schemaStructure,
+            updatedAt: cmsSchema.updatedAt,
+          })
+          .from(cmsSchema)
+          .where(eq(cmsSchema.projectId, projectId))
+          .orderBy(desc(cmsSchema.updatedAt))
+          .limit(4),
+
+        // Recent 4 blog posts
+        ctx.db
+          .select({
+            id: blogPost.id,
+            slug: blogPost.slug,
+            updatedAt: blogPost.updatedAt,
+          })
+          .from(blogPost)
+          .where(eq(blogPost.projectId, projectId))
+          .orderBy(desc(blogPost.updatedAt))
+          .limit(4),
+
+        // Active API keys (for key list)
+        ctx.db
+          .select({
+            id: projectApiKey.id,
+            name: projectApiKey.name,
+            keyPrefix: projectApiKey.keyPrefix,
+            status: projectApiKey.status,
+            lastUsedAt: projectApiKey.lastUsedAt,
+            createdAt: projectApiKey.createdAt,
+          })
+          .from(projectApiKey)
+          .where(
+            and(
+              eq(projectApiKey.projectId, projectId),
+              eq(projectApiKey.status, "active"),
+            ),
+          )
+          .orderBy(desc(projectApiKey.createdAt))
+          .limit(5),
+
+        // Admin/owner count for this project
+        // Admin/owner count for this project
+        ctx.db
+          .select({ count: count() })
+          .from(orgMember)
+          .where(
+            and(
+              eq(orgMember.orgId, orgId),
+              inArray(orgMember.role, ["owner", "admin"]),
+              eq(orgMember.status, "active"),
+            ),
+          ),
+
+        // Manager count assigned to this project
+        ctx.db
+          .select({ count: count() })
+          .from(orgMemberProject)
+          .where(eq(orgMemberProject.projectId, projectId)),
+
+        // Admin/owner user list (for avatars)
+        ctx.db
+          .select({
+            id: user.id,
+            name: user.name,
+            image: user.image,
+          })
+          .from(orgMember)
+          .innerJoin(user, eq(orgMember.userId, user.id))
+          .where(
+            and(
+              eq(orgMember.orgId, orgId),
+              inArray(orgMember.role, ["owner", "admin"]),
+              eq(orgMember.status, "active"),
+            ),
+          )
+          .limit(5),
+
+        // Manager user list (for avatars)
+        ctx.db
+          .select({
+            id: user.id,
+            name: user.name,
+            image: user.image,
+          })
+          .from(orgMemberProject)
+          .innerJoin(orgMember, eq(orgMemberProject.orgMemberId, orgMember.id))
+          .innerJoin(user, eq(orgMember.userId, user.id))
+          .where(eq(orgMemberProject.projectId, projectId))
+          .limit(5),
       ]);
 
-      // Schemas with no structure defined
-      const schemasWithoutStructure = await ctx.db
-        .select({ count: count() })
-        .from(cmsSchema)
-        .where(
-          and(
-            eq(cmsSchema.projectId, projectId),
-            sql`${cmsSchema.schemaStructure} IS NULL`,
-          ),
-        );
+      const normalizedSchemas = recentSchemasResult.map((s) => ({
+        ...s,
+        hasStructure: s.hasStructure !== null,
+      }));
 
       return successResponse(
         {
           schemas: {
             total: schemaCountResult[0]?.count ?? 0,
-            withoutStructure: schemasWithoutStructure[0]?.count ?? 0,
+            withoutStructure: schemasWithoutStructureResult[0]?.count ?? 0,
+            recent: normalizedSchemas,
           },
           blogs: {
             total: blogCountResult[0]?.count ?? 0,
             published: publishedBlogCountResult[0]?.count ?? 0,
+            recent: recentBlogsResult,
           },
           languages: {
             active: langCountResult[0]?.count ?? 0,
           },
           apiKeys: {
             active: activeKeyCountResult[0]?.count ?? 0,
+            list: apiKeyListResult,
           },
-          content: {
-            filledLocales: contentCountResult[0]?.count ?? 0,
+          team: {
+            admins: adminCountResult[0]?.count ?? 0,
+            managers: managerCountResult[0]?.count ?? 0,
+            adminList: adminListResult,
+            managerList: managerListResult,
           },
         },
         "Dashboard stats fetched.",
       );
     }),
 
-  /**
-   * API request analytics for the last N days.
-   * Returns:
-   *   - total requests, success count, error count
-   *   - requests per day (for sparkline/chart)
-   *   - top endpoints
-   *   - top error codes
-   *   - requests by status code breakdown
-   */
   getAnalytics: protectedProcedure
     .input(AnalyticsInputSchema)
     .query(async ({ ctx, input }) => {
@@ -184,13 +277,10 @@ export const projectDashboardRouter = createTRPCRouter({
         topErrorsResult,
         statusBreakdownResult,
       ] = await Promise.all([
-        // Total requests
         ctx.db
           .select({ count: count() })
           .from(apiRequestLog)
           .where(whereClause),
-
-        // Successful (2xx)
         ctx.db
           .select({ count: count() })
           .from(apiRequestLog)
@@ -200,61 +290,41 @@ export const projectDashboardRouter = createTRPCRouter({
               sql`${apiRequestLog.statusCode} >= 200 AND ${apiRequestLog.statusCode} < 300`,
             ),
           ),
-
-        // Errors (4xx + 5xx)
         ctx.db
           .select({ count: count() })
           .from(apiRequestLog)
           .where(and(whereClause, sql`${apiRequestLog.statusCode} >= 400`)),
-
-        // Avg response time
         ctx.db
           .select({ avg: sql<number>`ROUND(AVG(${apiRequestLog.durationMs}))` })
           .from(apiRequestLog)
           .where(whereClause),
-
-        // Requests per day
         ctx.db
           .select({
             date: sql<string>`DATE(${apiRequestLog.createdAt})`,
             total: count(),
             errors: sql<number>`COUNT(*) FILTER (WHERE ${apiRequestLog.statusCode} >= 400)`,
+            success: sql<number>`COUNT(*) FILTER (WHERE ${apiRequestLog.statusCode} >= 200 AND ${apiRequestLog.statusCode} < 300)`,
           })
           .from(apiRequestLog)
           .where(whereClause)
           .groupBy(sql`DATE(${apiRequestLog.createdAt})`)
           .orderBy(sql`DATE(${apiRequestLog.createdAt})`),
-
-        // Top endpoints
         ctx.db
-          .select({
-            endpoint: apiRequestLog.endpoint,
-            total: count(),
-          })
+          .select({ endpoint: apiRequestLog.endpoint, total: count() })
           .from(apiRequestLog)
           .where(whereClause)
           .groupBy(apiRequestLog.endpoint)
           .orderBy(desc(count()))
           .limit(5),
-
-        // Top error codes
         ctx.db
-          .select({
-            errorCode: apiRequestLog.errorCode,
-            total: count(),
-          })
+          .select({ errorCode: apiRequestLog.errorCode, total: count() })
           .from(apiRequestLog)
           .where(and(whereClause, sql`${apiRequestLog.errorCode} IS NOT NULL`))
           .groupBy(apiRequestLog.errorCode)
           .orderBy(desc(count()))
           .limit(5),
-
-        // Status code breakdown
         ctx.db
-          .select({
-            statusCode: apiRequestLog.statusCode,
-            total: count(),
-          })
+          .select({ statusCode: apiRequestLog.statusCode, total: count() })
           .from(apiRequestLog)
           .where(whereClause)
           .groupBy(apiRequestLog.statusCode)
@@ -284,10 +354,6 @@ export const projectDashboardRouter = createTRPCRouter({
       );
     }),
 
-  /**
-   * Recent activity log for the project.
-   * Returns the last N activity entries with user display info.
-   */
   getActivityFeed: protectedProcedure
     .input(
       z.object({

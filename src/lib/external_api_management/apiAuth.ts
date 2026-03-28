@@ -4,11 +4,7 @@ import { db } from "~/server/db";
 import { apiRequestLog, projectApiKey } from "~/server/db/project";
 import { eq, and } from "drizzle-orm";
 import { hashApiKey } from "~/lib/apiKey";
-
-import {
-  apiErrorResponse,
-  type ExternalErrorKey,
-} from "~/lib/external_api_management";
+import { apiErrorResponse, type ExternalErrorKey } from "./errors";
 
 export type ClientType = "browser" | "server" | "unknown";
 
@@ -25,10 +21,6 @@ export interface AuthError {
   messageOverride?: string;
 }
 
-/**
- * Resolves and validates the x-api-key header.
- * Returns projectId and keyId on success, or an error key on failure.
- */
 export async function resolveApiKey(
   req: NextRequest,
 ): Promise<AuthResult | AuthError> {
@@ -64,7 +56,7 @@ export async function resolveApiKey(
     return { ok: false, errorKey: "INVALID_API_KEY" };
   }
 
-  // Fire-and-forget: update lastUsedAt
+  // Fire-and-forget: update lastUsedAt — low priority, ok to not await
   void db
     .update(projectApiKey)
     .set({ lastUsedAt: new Date() })
@@ -78,16 +70,10 @@ export async function resolveApiKey(
   };
 }
 
-/**
- * Builds an auth error Response using the external API management helpers.
- */
 export function buildAuthErrorResponse(error: AuthError): Response {
   return apiErrorResponse(error.errorKey, error.messageOverride);
 }
 
-/**
- * Detects client type from the User-Agent header.
- */
 export function detectClientType(req: NextRequest): ClientType {
   const ua = req.headers.get("user-agent") ?? "";
   if (!ua) return "unknown";
@@ -100,18 +86,22 @@ export function detectClientType(req: NextRequest): ClientType {
   return "unknown";
 }
 
-/**
- * Hashes an IP address for privacy-safe logging.
- */
 export function hashIp(ip: string | null): string | null {
   if (!ip) return null;
   return createHash("sha256").update(ip).digest("hex").slice(0, 16);
 }
 
 /**
- * Writes a request log entry. Fire-and-forget — never awaited.
+ * Writes a request log entry.
+ *
+ * Returns a Promise — callers MUST await this before returning the response.
+ * Using void/fire-and-forget causes the insert to be dropped by Node.js
+ * before it completes when the route handler returns early.
+ *
+ * Skips the insert when projectId is "unknown" (auth failed before we could
+ * resolve the project) to avoid UUID FK violations.
  */
-export function writeRequestLog(params: {
+export async function writeRequestLog(params: {
   projectId: string;
   apiKeyId: string | null;
   endpoint: string;
@@ -124,19 +114,26 @@ export function writeRequestLog(params: {
   ipHash?: string | null;
   country?: string | null;
   clientType: ClientType;
-}): void {
-  void db.insert(apiRequestLog).values({
-    projectId: params.projectId,
-    apiKeyId: params.apiKeyId,
-    endpoint: params.endpoint,
-    resourceSlug: params.resourceSlug,
-    locale: params.locale,
-    statusCode: params.statusCode,
-    errorCode: params.errorCode,
-    durationMs: params.durationMs,
-    responseSizeBytes: params.responseSizeBytes,
-    ipHash: params.ipHash,
-    country: params.country,
-    clientType: params.clientType,
-  });
+}): Promise<void> {
+  if (params.projectId === "unknown") return;
+
+  try {
+    await db.insert(apiRequestLog).values({
+      projectId: params.projectId,
+      apiKeyId: params.apiKeyId,
+      endpoint: params.endpoint,
+      resourceSlug: params.resourceSlug,
+      locale: params.locale,
+      statusCode: params.statusCode,
+      errorCode: params.errorCode,
+      durationMs: params.durationMs,
+      responseSizeBytes: params.responseSizeBytes,
+      ipHash: params.ipHash,
+      country: params.country,
+      clientType: params.clientType,
+    });
+  } catch (err) {
+    // Log to console but never throw — logging must never break the API response
+    console.warn("[requestLog] Failed to write request log:", err);
+  }
 }

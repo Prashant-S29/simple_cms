@@ -2,7 +2,7 @@
 
 import { and, eq } from "drizzle-orm";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
-import { projectLanguage } from "~/server/db/project";
+import { activityLog, projectLanguage } from "~/server/db/project";
 import { errorResponse, getErrorInfo, successResponse } from "~/lib/errors";
 import { requireProjectAccess } from "~/server/api/membershipGuard";
 // import { getLocaleLabel } from "~/lib/locales";
@@ -156,16 +156,17 @@ export const projectLanguageRouter = createTRPCRouter({
         )
         .returning();
 
-      await logActivity({
-        db: ctx.db,
-        projectId,
-        userId: ctx.session.user.id,
-        action: "language.added",
-        resourceType: "language",
-        resourceId: inserted[0]!.id,
-        resourceSlug: inserted[0]!.locale,
-        metadata: { locales: toInsert.map((l) => l.locale).join(", ") },
-      });
+      await ctx.db.insert(activityLog).values(
+        inserted.map((lang) => ({
+          projectId,
+          userId: ctx.session.user.id,
+          action: "language.added" as const,
+          resourceType: "language" as const,
+          resourceId: lang.id,
+          resourceSlug: lang.locale,
+          metadata: { locale: lang.locale, label: lang.label },
+        })),
+      );
 
       const skipped = locales.length - toInsert.length;
       const msg =

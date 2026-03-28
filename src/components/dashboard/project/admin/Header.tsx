@@ -6,7 +6,7 @@ import { ProjectSelector, PanelToggle } from "~/components/dashboard/project";
 
 export const ProjectAdminHeader: React.FC = () => {
   return (
-    <div className="bg-background fixed top-0 z-20 flex h-16 w-full items-center justify-between px-6">
+    <div className="bg-background fixed top-0 z-20 flex h-16 w-full items-center justify-between pr-6 pl-2">
       <div className="flex items-center gap-2 text-sm">
         <OrgSelector />
         <div className="bg-accent h-4 w-0.5 rotate-12 rounded-full" />

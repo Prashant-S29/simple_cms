@@ -24,39 +24,54 @@ export const ProjectAdminPageSideMenu: React.FC = () => {
     const base = `/dashboard/org/${orgSlug}/project/${projectSlug}/admin${
       segment ? `/${segment}` : ""
     }`;
-
-    if (!segment) {
-      return pathname === base;
-    }
-
+    if (!segment) return pathname === base;
     return pathname.startsWith(base);
   };
 
   return (
-    <div className="flex h-full min-w-50 flex-col gap-1 px-3 pt-18">
-      {PROJECT_ADMIN_DASHBOARD_NAVLINKS.map((navLink, index) => {
-        const active = isActive(navLink.segment);
-        return (
-          <Button
-            key={index}
-            variant={active ? "secondary" : "ghost"}
-            nativeButton={false}
-            className="justify-start rounded-lg"
-            render={
-              active ? (
-                <span>{navLink.label}</span>
-              ) : (
-                <Link
-                  href={buildNavHref(navLink.segment)}
-                  className="text-muted-foreground"
-                >
-                  {navLink.label}
-                </Link>
-              )
-            }
-          />
-        );
-      })}
+    <div className="flex max-w-50 min-w-50 flex-col gap-2">
+      <div className="flex flex-col px-3 pt-18">
+        <Button
+          variant={isActive("") ? "secondary" : "ghost"}
+          nativeButton={false}
+          className="justify-start rounded-lg"
+          render={
+            isActive("") ? (
+              <span>Dashboard</span>
+            ) : (
+              <Link href={buildNavHref("")}>Dashboard</Link>
+            )
+          }
+        />
+
+        {PROJECT_ADMIN_DASHBOARD_NAVLINKS.map((group, groupIndex) => (
+          <div key={groupIndex} className="flex flex-col">
+            <p className="text-muted-foreground mt-2 mb-1 px-1 text-xs">
+              {group.category}
+            </p>
+            {group.links.map((navLink, linkIndex) => {
+              const active = isActive(navLink.segment);
+              return (
+                <Button
+                  key={linkIndex}
+                  variant={active ? "secondary" : "ghost"}
+                  nativeButton={false}
+                  className="justify-start rounded-lg"
+                  render={
+                    active ? (
+                      <span>{navLink.label}</span>
+                    ) : (
+                      <Link href={buildNavHref(navLink.segment)}>
+                        {navLink.label}
+                      </Link>
+                    )
+                  }
+                />
+              );
+            })}
+          </div>
+        ))}
+      </div>
     </div>
   );
 };

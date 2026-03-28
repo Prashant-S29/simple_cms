@@ -2,7 +2,7 @@ import { headers } from "next/headers";
 import React from "react";
 import { checkAuthServer } from "~/lib/auth";
 import { ResourceHandler } from "~/components/common";
-import ProjectAdminPage from "./ProjectAdminPage";
+import { ProjectAdminPage } from "./ProjectAdminPage";
 
 interface Props {
   params: Promise<{

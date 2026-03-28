@@ -3,24 +3,30 @@ export const PAGINATION_LIMIT = 50;
 
 export const PROJECT_ADMIN_DASHBOARD_NAVLINKS = [
   {
-    label: "Dashboard",
-    segment: "",
+    category: "Create",
+    links: [
+      {
+        label: "Schemas",
+        segment: "schema",
+      },
+      {
+        label: "Blogs",
+        segment: "blog",
+      },
+    ],
   },
   {
-    label: "Schemas",
-    segment: "schema",
-  },
-  {
-    label: "Blogs",
-    segment: "blog",
-  },
-  {
-    label: "API Keys",
-    segment: "api-keys",
-  },
-  {
-    label: "Settings",
-    segment: "settings",
+    category: "Manage",
+    links: [
+      {
+        label: "API Keys",
+        segment: "api-keys",
+      },
+      {
+        label: "Settings",
+        segment: "settings",
+      },
+    ],
   },
 ];
 

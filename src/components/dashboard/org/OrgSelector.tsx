@@ -82,9 +82,12 @@ export const OrgSelector: React.FC = () => {
           disabled={isLoading}
           className={cn(
             buttonVariants({ variant: "ghost", size: "sm" }),
-            "cursor-pointer",
+            "h-auto cursor-pointer p-1",
           )}
         >
+          <p className="bg-primary text-primary-foreground mr-2 flex size-7 items-center justify-center rounded-full text-sm">
+            {activeOrg?.name?.[0] ?? orgSlug[0]}
+          </p>
           {activeOrg?.name ?? orgSlug}
           <HugeiconsIcon
             icon={ArrowDown01Icon}

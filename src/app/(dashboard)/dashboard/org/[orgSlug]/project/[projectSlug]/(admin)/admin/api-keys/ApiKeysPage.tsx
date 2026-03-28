@@ -96,8 +96,7 @@ const ApiKeysPage: React.FC<Props> = ({ projectSlug, orgId }) => {
   return (
     <>
       <div>
-        {/* ── Header ────────────────────────────────────────────────────────── */}
-        <div className="sticky top-0 z-20 flex items-center justify-between border-b px-4 py-3">
+        <div className="bg-muted sticky top-0 z-20 flex items-center justify-between border-b px-4 py-3">
           <div>
             <h1 className="font-medium">API Keys</h1>
             <p className="text-muted-foreground mt-0.5 text-sm">
@@ -111,8 +110,7 @@ const ApiKeysPage: React.FC<Props> = ({ projectSlug, orgId }) => {
         </div>
 
         <div className="flex flex-col gap-6 p-4">
-          {/* ── Usage note ────────────────────────────────────────────────── */}
-          <div className="bg-muted rounded-xl p-4">
+          {/*<div className="bg-muted rounded-xl p-4">
             <p className="text-sm font-medium">How to use</p>
             <p className="text-muted-foreground mt-1 text-sm">
               Pass your API key in the{" "}
@@ -133,7 +131,7 @@ GET /api/v1/blogs/my-post-slug?locale=en
 x-api-key: scms_your_key_here`}
               </pre>
             </div>
-          </div>
+          </div>*/}
 
           {/* ── Active keys ───────────────────────────────────────────────── */}
           <div className="bg-card rounded-2xl border">

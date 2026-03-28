@@ -3,3 +3,4 @@ export * from "./errors";
 export * from "./response";
 export * from "./validation";
 export * from "./apiAuth";
+export * from "./cors";

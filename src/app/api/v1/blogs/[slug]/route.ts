@@ -12,12 +12,17 @@ import {
   hashIp,
   resolveApiKey,
   writeRequestLog,
+} from "~/lib/external_api_management/apiAuth";
+import {
   apiErrorResponse,
   apiSuccessResponse,
+  handleOptions,
+  withCors,
 } from "~/lib/external_api_management";
 import { parseBlogDetailParams } from "~/lib/external_api_management/api";
 
 export const runtime = "nodejs";
+export const OPTIONS = handleOptions;
 
 export async function GET(
   req: NextRequest,
@@ -34,19 +39,7 @@ export async function GET(
   const auth = await resolveApiKey(req);
 
   if (!auth.ok) {
-    writeRequestLog({
-      projectId: "unknown",
-      apiKeyId: null,
-      endpoint: "blogs.detail",
-      resourceSlug: rawSlug,
-      statusCode: 401,
-      errorCode: auth.errorKey,
-      durationMs: Date.now() - start,
-      ipHash,
-      country,
-      clientType,
-    });
-    return buildAuthErrorResponse(auth);
+    return withCors(buildAuthErrorResponse(auth));
   }
 
   const { projectId, apiKeyId } = auth;
@@ -56,7 +49,7 @@ export async function GET(
   const parsed = parseBlogDetailParams(rawSlug, searchParams);
 
   if (!parsed.ok) {
-    writeRequestLog({
+    await writeRequestLog({
       projectId,
       apiKeyId,
       endpoint: "blogs.detail",
@@ -68,7 +61,7 @@ export async function GET(
       country,
       clientType,
     });
-    return parsed.response;
+    return withCors(parsed.response);
   }
 
   const { slug, locale } = parsed;
@@ -86,11 +79,7 @@ export async function GET(
     .limit(1);
 
   if (!lang) {
-    const res = apiErrorResponse(
-      "LOCALE_NOT_FOUND",
-      `Locale "${locale}" is not configured for this project.`,
-    );
-    writeRequestLog({
+    await writeRequestLog({
       projectId,
       apiKeyId,
       endpoint: "blogs.detail",
@@ -103,15 +92,16 @@ export async function GET(
       country,
       clientType,
     });
-    return res;
+    return withCors(
+      apiErrorResponse(
+        "LOCALE_NOT_FOUND",
+        `Locale "${locale}" is not configured for this project.`,
+      ),
+    );
   }
 
   if (lang.status === "disabled") {
-    const res = apiErrorResponse(
-      "LOCALE_DISABLED",
-      `Locale "${locale}" is disabled.`,
-    );
-    writeRequestLog({
+    await writeRequestLog({
       projectId,
       apiKeyId,
       endpoint: "blogs.detail",
@@ -124,7 +114,9 @@ export async function GET(
       country,
       clientType,
     });
-    return res;
+    return withCors(
+      apiErrorResponse("LOCALE_DISABLED", `Locale "${locale}" is disabled.`),
+    );
   }
 
   // ── Resolve post ───────────────────────────────────────────────────────────
@@ -135,11 +127,7 @@ export async function GET(
     .limit(1);
 
   if (!post) {
-    const res = apiErrorResponse(
-      "POST_NOT_FOUND",
-      `Blog post "${slug}" not found.`,
-    );
-    writeRequestLog({
+    await writeRequestLog({
       projectId,
       apiKeyId,
       endpoint: "blogs.detail",
@@ -152,7 +140,9 @@ export async function GET(
       country,
       clientType,
     });
-    return res;
+    return withCors(
+      apiErrorResponse("POST_NOT_FOUND", `Blog post "${slug}" not found.`),
+    );
   }
 
   // ── Fetch published + active content ──────────────────────────────────────
@@ -170,11 +160,7 @@ export async function GET(
     .limit(1);
 
   if (!content) {
-    const res = apiErrorResponse(
-      "POST_NOT_PUBLISHED",
-      `Blog post "${slug}" is not published in locale "${locale}".`,
-    );
-    writeRequestLog({
+    await writeRequestLog({
       projectId,
       apiKeyId,
       endpoint: "blogs.detail",
@@ -187,34 +173,41 @@ export async function GET(
       country,
       clientType,
     });
-    return res;
+    return withCors(
+      apiErrorResponse(
+        "POST_NOT_PUBLISHED",
+        `Blog post "${slug}" is not published in locale "${locale}".`,
+      ),
+    );
   }
 
-  const res = apiSuccessResponse(
-    {
-      slug: post.slug,
-      locale,
-      title: content.title,
-      excerpt: content.excerpt,
-      coverImage: content.coverImage,
-      body: content.body,
-      author: content.authorName
-        ? {
-            name: content.authorName,
-            designation: content.authorDesignation,
-            company: content.authorCompany,
-          }
-        : null,
-      tags: content.tags,
-      meta: content.customMeta,
-      publishedAt: content.publishedAt,
-      updatedAt: content.updatedAt,
-    },
-    "Blog post fetched successfully.",
-    { cacheSeconds: 60 },
+  const res = withCors(
+    apiSuccessResponse(
+      {
+        slug: post.slug,
+        locale,
+        title: content.title,
+        excerpt: content.excerpt,
+        coverImage: content.coverImage,
+        body: content.body,
+        author: content.authorName
+          ? {
+              name: content.authorName,
+              designation: content.authorDesignation,
+              company: content.authorCompany,
+            }
+          : null,
+        tags: content.tags,
+        meta: content.customMeta,
+        publishedAt: content.publishedAt,
+        updatedAt: content.updatedAt,
+      },
+      "Blog post fetched successfully.",
+      { cacheSeconds: 60 },
+    ),
   );
 
-  writeRequestLog({
+  await writeRequestLog({
     projectId,
     apiKeyId,
     endpoint: "blogs.detail",
