@@ -16,7 +16,7 @@ export const InvitationEmail: React.FC<InvitationEmailProps> = ({
   role,
   expiresAt,
 }) => {
-  const joinUrl = `http://localhost:3000/dashboard/org/join`;
+  const joinUrl = `${process.env.BETTER_AUTH_URL}/dashboard/org/join`;
 
   const roleLabel = role === "admin" ? "Admin" : "Manager";
 

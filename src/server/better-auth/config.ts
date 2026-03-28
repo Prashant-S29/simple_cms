@@ -12,7 +12,7 @@ export const auth = betterAuth({
     google: {
       clientId: env.BETTER_AUTH_GOOGLE_CLIENT_ID,
       clientSecret: env.BETTER_AUTH_GOOGLE_CLIENT_SECRET,
-      redirectURI: "http://localhost:3000/api/auth/callback/google",
+      redirectURI: `${process.env.BETTER_AUTH_URL}/auth/google/callback`,
     },
   },
   // emailVerification: {
@@ -23,7 +23,10 @@ export const auth = betterAuth({
   //     });
   //   },
   // },
-  trustedOrigins: ["http://localhost:3000"],
+  trustedOrigins: [
+    "http://localhost:3000",
+    "https://simple-cms-silk.vercel.app",
+  ],
   advanced: {
     database: {
       generateId: false,

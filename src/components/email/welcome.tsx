@@ -18,7 +18,7 @@ export const WelcomeEmail: React.FC<WelcomeEmailProps> = ({ userName }) => {
       <Section className="my-5">
         <Button
           className="inline-block rounded-[6.6px] bg-[#E7E7E7] px-3 py-2 text-center text-sm font-medium text-[#000000] no-underline"
-          href="http://localhost:3000/dashboard"
+          href={`${process.env.BETTER_AUTH_URL}/dashboard`}
         >
           Start Exploring
         </Button>
