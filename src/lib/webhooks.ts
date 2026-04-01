@@ -56,6 +56,7 @@ export async function fireWebhook(
   const start = Date.now();
 
   try {
+    console.debug("webhook: sending", url, payload)
     const response = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -85,6 +86,9 @@ export async function fireWebhook(
         clientType: "server",
       });
     }
+    
+    console.debug("webhook success")
+    
   } catch (err) {
     const durationMs = Date.now() - start;
 
