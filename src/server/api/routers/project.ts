@@ -9,6 +9,7 @@ import {
   GetProjectBySlugSchema,
   GetProjectsSchema,
   UpdateProjectSchema,
+  UpdateProjectWebhookSchema,
 } from "~/zodSchema/project";
 import { errorResponse, getErrorInfo, successResponse } from "~/lib/errors";
 import {
@@ -171,6 +172,8 @@ export const projectRouter = createTRPCRouter({
           description: project.description,
           orgId: project.orgId,
           createdAt: project.createdAt,
+          webhookUrl: project.webhookUrl,
+          webhookSecret: project.webhookSecret,
         })
         .from(project)
         .where(
@@ -211,6 +214,8 @@ export const projectRouter = createTRPCRouter({
           description: project.description,
           orgId: project.orgId,
           createdAt: project.createdAt,
+          webhookUrl: project.webhookUrl,
+          webhookSecret: project.webhookSecret,
         })
         .from(project)
         .where(and(eq(project.id, input.id), eq(project.orgId, input.orgId)))
@@ -233,6 +238,46 @@ export const projectRouter = createTRPCRouter({
         { ...projectRow, myRole: guard.membership.orgRole },
         "Project fetched successfully.",
       );
+    }),
+
+  updateWebhook: protectedProcedure
+    .input(UpdateProjectWebhookSchema)
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id;
+
+      const [projectRow] = await ctx.db
+        .select({ id: project.id, orgId: project.orgId })
+        .from(project)
+        .where(eq(project.id, input.id))
+        .limit(1);
+
+      if (!projectRow) {
+        return errorResponse(getErrorInfo("project", "NOT_FOUND"));
+      }
+
+      const guard = await requireProjectAccess(
+        ctx.db,
+        projectRow.orgId,
+        projectRow.id,
+        userId,
+        "project:update",
+      );
+      if (!guard.ok) return guard.response;
+
+      const [updated] = await ctx.db
+        .update(project)
+        .set({
+          webhookUrl: input.webhookUrl ?? null,
+          webhookSecret: input.webhookSecret ?? null,
+        })
+        .where(eq(project.id, input.id))
+        .returning();
+
+      if (!updated) {
+        return errorResponse(getErrorInfo("project", "UPDATE_FAILED"));
+      }
+
+      return successResponse(updated, "Webhook settings saved.");
     }),
 
   update: protectedProcedure

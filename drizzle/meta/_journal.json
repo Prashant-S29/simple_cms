@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1775065462170,
+      "tag": "0000_on_demand_revalidation_webhook",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1775066329531,
+      "tag": "0001_added_dummy_filed_on_project_table",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1775066364094,
+      "tag": "0002_dropped_dummy_filed_on_project_table",
+      "breakpoints": true
+    }
+  ]
+}

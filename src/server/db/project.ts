@@ -45,6 +45,8 @@ export const project = createTable(
       .$defaultFn(() => new Date())
       .notNull(),
     updatedAt: d.timestamp({ withTimezone: true }).$onUpdate(() => new Date()),
+    webhookUrl: d.text(),
+    webhookSecret: d.text(),
   }),
   (t) => [
     index("project_slug_idx").on(t.slug),

@@ -1,12 +1,18 @@
 import { and, eq } from "drizzle-orm";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
-import { cmsContent, cmsSchema, projectLanguage } from "~/server/db/project";
+import {
+  cmsContent,
+  cmsSchema,
+  project,
+  projectLanguage,
+} from "~/server/db/project";
 import { errorResponse, getErrorInfo, successResponse } from "~/lib/errors";
 import { requireProjectAccess } from "~/server/api/membershipGuard";
 import { initContentFromSchema } from "~/lib/cms/contentInitializer";
 import type { SchemaStructure } from "~/zodSchema/cmsSchema";
 import { GetContentSchema, SaveContentSchema } from "~/zodSchema/cmsContent";
 import { logActivity } from "~/lib/activityLog";
+import { fireWebhook } from "~/lib/webhooks";
 
 export const cmsContentRouter = createTRPCRouter({
   /**
@@ -218,6 +224,21 @@ export const cmsContentRouter = createTRPCRouter({
         resourceId: upserted!.id,
         resourceSlug: schemaRow?.slug,
         metadata: { locale, schemaId },
+      });
+
+      const [proj] = await ctx.db
+        .select({
+          webhookUrl: project.webhookUrl,
+          webhookSecret: project.webhookSecret,
+        })
+        .from(project)
+        .where(eq(project.id, projectId))
+        .limit(1);
+
+      void fireWebhook(projectId, proj?.webhookUrl, proj?.webhookSecret, {
+        event: "content.published",
+        schema: schemaRow?.slug ?? schemaId,
+        locale,
       });
 
       return successResponse(upserted!, "Content saved successfully.");

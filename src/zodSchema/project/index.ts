@@ -24,6 +24,16 @@ export const UpdateProjectSchema = z.object({
   description: z.string().max(500).optional(),
 });
 
+export const UpdateProjectWebhookSchema = z.object({
+  id: z.string().uuid(),
+  orgId: z.string().uuid(),
+  webhookUrl: z.string().url("Must be a valid URL").nullable().optional(),
+  webhookSecret: z.string().max(256).nullable().optional(),
+});
+
 export type CreateProjectSchemaType = z.infer<typeof CreateProjectSchema>;
 export type GetProjectsSchemaType = z.infer<typeof GetProjectsSchema>;
 export type UpdateProjectSchemaType = z.infer<typeof UpdateProjectSchema>;
+export type UpdateProjectWebhookSchemaType = z.infer<
+  typeof UpdateProjectWebhookSchema
+>;

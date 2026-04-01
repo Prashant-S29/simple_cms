@@ -7,6 +7,7 @@ import { Skeleton } from "~/components/ui/skeleton";
 import {
   ProjectLanguageSettings,
   ProjectExportSettings,
+  ProjectWebhookSettings,
 } from "~/components/dashboard/project/settings";
 
 interface Props {
@@ -52,6 +53,12 @@ const ProjectSettingsPage: React.FC<Props> = ({ projectSlug, orgId }) => {
           projectId={project.id}
           projectSlug={project.slug}
           orgId={orgId}
+        />
+        <ProjectWebhookSettings
+          projectId={project.id}
+          orgId={orgId}
+          webhookUrl={project.webhookUrl ?? ""}
+          webhookSecret={project.webhookSecret ?? ""}
         />
       </div>
     </div>

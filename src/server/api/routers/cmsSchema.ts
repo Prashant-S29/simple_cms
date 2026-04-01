@@ -1,6 +1,7 @@
 import { and, asc, count, desc, eq, ilike, inArray, sql } from "drizzle-orm";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
-import { activityLog, cmsSchema } from "~/server/db/project";
+import { activityLog, cmsSchema, project } from "~/server/db/project";
+import { fireWebhook } from "~/lib/webhooks";
 import { slugify } from "~/lib/utils";
 import { errorResponse, getErrorInfo, successResponse } from "~/lib/errors";
 import { requireProjectAccess } from "~/server/api/membershipGuard";
@@ -365,6 +366,25 @@ export const cmsSchemaRouter = createTRPCRouter({
         metadata: { title: updated!.title },
       });
 
+      const [projUpdate] = await ctx.db
+        .select({
+          webhookUrl: project.webhookUrl,
+          webhookSecret: project.webhookSecret,
+        })
+        .from(project)
+        .where(eq(project.id, input.projectId))
+        .limit(1);
+
+      void fireWebhook(
+        input.projectId,
+        projUpdate?.webhookUrl,
+        projUpdate?.webhookSecret,
+        {
+          event: "schema.updated",
+          schema: updated!.slug,
+        },
+      );
+
       return successResponse(updated!, "Schema updated successfully.");
     }),
 
@@ -466,6 +486,25 @@ export const cmsSchemaRouter = createTRPCRouter({
         metadata: { title: existing.title },
       });
 
+      const [projDelete] = await ctx.db
+        .select({
+          webhookUrl: project.webhookUrl,
+          webhookSecret: project.webhookSecret,
+        })
+        .from(project)
+        .where(eq(project.id, input.projectId))
+        .limit(1);
+
+      void fireWebhook(
+        input.projectId,
+        projDelete?.webhookUrl,
+        projDelete?.webhookSecret,
+        {
+          event: "schema.updated",
+          schema: existing.slug,
+        },
+      );
+
       return successResponse(
         null,
         `Schema "${existing.title}" has been deleted.`,
@@ -519,6 +558,25 @@ export const cmsSchemaRouter = createTRPCRouter({
         resourceSlug: existing.slug,
         metadata: { title: existing.title },
       });
+
+      const [projStructure] = await ctx.db
+        .select({
+          webhookUrl: project.webhookUrl,
+          webhookSecret: project.webhookSecret,
+        })
+        .from(project)
+        .where(eq(project.id, input.projectId))
+        .limit(1);
+
+      void fireWebhook(
+        input.projectId,
+        projStructure?.webhookUrl,
+        projStructure?.webhookSecret,
+        {
+          event: "schema.updated",
+          schema: existing.slug,
+        },
+      );
 
       return successResponse(updated!, "Schema structure saved successfully.");
     }),

@@ -4,8 +4,10 @@ import { logActivity } from "~/lib/activityLog";
 import {
   blogPost,
   blogPostContent,
+  project,
   projectLanguage,
 } from "~/server/db/project";
+import { fireWebhook } from "~/lib/webhooks";
 import { errorResponse, getErrorInfo, successResponse } from "~/lib/errors";
 import { requireProjectAccess } from "~/server/api/membershipGuard";
 import {
@@ -206,6 +208,26 @@ export const blogContentRouter = createTRPCRouter({
         metadata: { locale, postId },
       });
 
+      const [projSave] = await ctx.db
+        .select({
+          webhookUrl: project.webhookUrl,
+          webhookSecret: project.webhookSecret,
+        })
+        .from(project)
+        .where(eq(project.id, projectId))
+        .limit(1);
+
+      void fireWebhook(
+        projectId,
+        projSave?.webhookUrl,
+        projSave?.webhookSecret,
+        {
+          event: "blog.published",
+          slug: post?.slug ?? postId,
+          locale,
+        },
+      );
+
       return successResponse(upserted!, "Blog content saved.");
     }),
 
@@ -280,6 +302,26 @@ export const blogContentRouter = createTRPCRouter({
         metadata: { locale },
       });
 
+      const [projPublish] = await ctx.db
+        .select({
+          webhookUrl: project.webhookUrl,
+          webhookSecret: project.webhookSecret,
+        })
+        .from(project)
+        .where(eq(project.id, projectId))
+        .limit(1);
+
+      void fireWebhook(
+        projectId,
+        projPublish?.webhookUrl,
+        projPublish?.webhookSecret,
+        {
+          event: "blog.published",
+          slug: post?.slug ?? postId,
+          locale,
+        },
+      );
+
       return successResponse(updated!, "Post published successfully.");
     }),
 
@@ -343,6 +385,26 @@ export const blogContentRouter = createTRPCRouter({
         metadata: { locale },
       });
 
+      const [projUnpublish] = await ctx.db
+        .select({
+          webhookUrl: project.webhookUrl,
+          webhookSecret: project.webhookSecret,
+        })
+        .from(project)
+        .where(eq(project.id, projectId))
+        .limit(1);
+
+      void fireWebhook(
+        projectId,
+        projUnpublish?.webhookUrl,
+        projUnpublish?.webhookSecret,
+        {
+          event: "blog.unpublished",
+          slug: post?.slug ?? postId,
+          locale,
+        },
+      );
+
       return successResponse(updated!, "Post moved back to draft.");
     }),
 
@@ -405,6 +467,26 @@ export const blogContentRouter = createTRPCRouter({
         resourceSlug: post?.slug,
         metadata: { locale, isActive },
       });
+
+      const [projToggle] = await ctx.db
+        .select({
+          webhookUrl: project.webhookUrl,
+          webhookSecret: project.webhookSecret,
+        })
+        .from(project)
+        .where(eq(project.id, projectId))
+        .limit(1);
+
+      void fireWebhook(
+        projectId,
+        projToggle?.webhookUrl,
+        projToggle?.webhookSecret,
+        {
+          event: "blog.published",
+          slug: post?.slug ?? postId,
+          locale,
+        },
+      );
 
       return successResponse(
         updated!,

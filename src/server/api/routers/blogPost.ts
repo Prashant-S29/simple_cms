@@ -1,6 +1,7 @@
 import { and, count, desc, eq, ilike } from "drizzle-orm";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
-import { blogPost, blogPostContent } from "~/server/db/project";
+import { blogPost, blogPostContent, project } from "~/server/db/project";
+import { fireWebhook } from "~/lib/webhooks";
 import { slugify } from "~/lib/utils";
 import { errorResponse, getErrorInfo, successResponse } from "~/lib/errors";
 import { requireProjectAccess } from "~/server/api/membershipGuard";
@@ -235,6 +236,20 @@ export const blogPostRouter = createTRPCRouter({
         resourceId: input.id,
         resourceSlug: post.slug,
         metadata: { slug: post.slug },
+      });
+
+      const [proj] = await ctx.db
+        .select({
+          webhookUrl: project.webhookUrl,
+          webhookSecret: project.webhookSecret,
+        })
+        .from(project)
+        .where(eq(project.id, input.projectId))
+        .limit(1);
+
+      void fireWebhook(input.projectId, proj?.webhookUrl, proj?.webhookSecret, {
+        event: "blog.deleted",
+        slug: post.slug,
       });
 
       return successResponse(
