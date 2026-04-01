@@ -44,8 +44,8 @@ export const ProjectWebhookSettings: React.FC<Props> = ({
     mutation.mutate({
       id: projectId,
       orgId,
-      webhookUrl: webhookUrl.trim() || null,
-      webhookSecret: webhookSecret.trim() || null,
+      webhookUrl: webhookUrlInput.trim() || null,
+      webhookSecret: webhookSecretInput.trim() || null,
     });
   };
 
